@@ -1,22 +1,22 @@
 {
-  "title": "Entity Manager (Alpha)",
-  "description": "Manage and standardize Home Assistant entity names",
+  "title": "Gestor de Entidades (Alpha)",
+  "description": "Gestionar y estandarizar nombres de entidades de Home Assistant",
   "configuration": {
     "log_level": {
-      "name": "Log Level",
-      "description": "Set the logging level for debugging"
+      "name": "Nivel de registro",
+      "description": "Establece el nivel de registro para depuración"
     },
     "enable_disabled_entities": {
-      "name": "Enable disabled entities when renaming",
-      "description": "Automatically enable disabled entities when they are renamed. If disabled, entities will remain in their disabled state after renaming."
+      "name": "Activar entidades desactivadas al renombrar",
+      "description": "Activa automáticamente las entidades desactivadas cuando se renombran. Si está desactivado, las entidades permanecerán desactivadas después del renombrado."
     }
   },
   "options": {
     "log_level": {
       "options": {
-        "debug": "Debug",
+        "debug": "Depuración",
         "info": "Info",
-        "warning": "Warning",
+        "warning": "Advertencia",
         "error": "Error"
       }
     }

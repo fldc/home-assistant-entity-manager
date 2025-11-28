@@ -7,7 +7,7 @@
       "description": "Legt das Logging-Level für die Fehlersuche fest"
     },
     "enable_disabled_entities": {
-      "name": "Deaktivierte Entities beim Umbenennen aktivieren",
+      "name": "Deaktivierte Entitäten beim Umbenennen aktivieren",
       "description": "Aktiviert automatisch deaktivierte Entitäten, wenn sie umbenannt werden. Falls deaktiviert, bleiben die Entitäten nach dem Umbenennen in ihrem deaktivierten Zustand."
     }
   },
