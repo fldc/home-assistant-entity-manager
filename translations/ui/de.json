@@ -3,16 +3,27 @@
     "title": "Entitäts-Manager",
     "version_badge": "ALPHA",
     "warning_banner": "ALPHA VERSION - NUR ZUR ENTWICKLUNG",
-    "warning_description": "Nicht in Produktion verwenden! Dieses Add-on befindet sich in einer frühen Entwicklungsphase und kann Probleme verursachen."
+    "warning_description": "Nicht in Produktion verwenden! Dieses Add-on befindet sich in einer frühen Entwicklungsphase und kann Probleme verursachen.",
+    "settings": "Einstellungen"
+  },
+  "panels": {
+    "areas": "Bereiche",
+    "devices": "Geräte",
+    "entities": "Entitäten"
   },
   "filters": {
     "select_area": "Wähle einen Bereich...",
     "all_domains": "Alle Domänen",
-    "skip_maintained": "Gewartet",
+    "skip_maintained": "Gepflegte überspringen",
     "only_changes": "Nur Änderungen",
-    "show_disabled": "Deaktivierte",
+    "show_disabled": "Deaktivierte anzeigen",
     "area_override_label": "Bereich überschreiben:",
     "unassigned_area": "Nicht zugewiesen"
+  },
+  "area": {
+    "name_override_label": "Bereichsname überschreiben",
+    "placeholder": "Bereichsname...",
+    "no_areas": "Keine Bereiche gefunden"
   },
   "summary": {
     "entities": "Entitäten",
@@ -55,7 +66,28 @@
     "all_related_entities_note": "Alle zugehörigen Entitäts-IDs werden entsprechend angepasst",
     "save_cancel_hint": "{save} um zu speichern, {cancel} um abzubrechen",
     "name_already_correct": "Name bereits korrekt",
-    "renaming": "Umbenennung"
+    "renaming": "Umbenennung",
+    "suffix_label": "Entitäts-Suffix:",
+    "suffix_placeholder": "z.B. Batterie, Position, Helligkeit...",
+    "apply_mapping": "Typ-Vorschlag anwenden",
+    "revert": "Zurücksetzen",
+    "orphan_badge": "Verwaist",
+    "orphan_hint": "Entität wird nicht mehr von der Integration bereitgestellt",
+    "id_conflict": "ID-Konflikt",
+    "no_change": "OK",
+    "delete_orphan": "Verwaiste Entität löschen",
+    "delete_entity": "Entität löschen",
+    "apply_rename": "Umbenennung anwenden",
+    "enable": "Aktivieren",
+    "no_name": "(kein Name)"
+  },
+  "virtual_devices": {
+    "automations": "Automatisierungen",
+    "scenes": "Szenen",
+    "scripts": "Skripte",
+    "schedules": "Zeitpläne",
+    "helpers": "Helfer",
+    "other": "Sonstige"
   },
   "messages": {
     "loading": "Lädt...",
@@ -114,7 +146,15 @@
     "count_plural": "Geräte",
     "current_name": "Aktueller Name",
     "new_name": "Neuer Name",
-    "open_details": "Gerätedetails öffnen"
+    "open_details": "Gerätedetails öffnen",
+    "base_name_label": "Geräte-Basisname (ohne Bereichs-Präfix)",
+    "open_in_ha": "Gerät in Home Assistant öffnen",
+    "entities_without_device": "Entitäten ohne Gerät",
+    "unassigned": "Nicht zugewiesen",
+    "select_device": "Gerät auswählen",
+    "select_area": "Bereich auswählen",
+    "disabled_badge": "deaktiviert",
+    "filter_placeholder": "Geräte filtern..."
   },
   "units": {
     "entities": "Entitäten",
@@ -183,5 +223,77 @@
     "water_heater": "Warmwasserbereiter",
     "weather": "Wetter",
     "zone": "Zone"
+  },
+  "delete_modal": {
+    "title": "Entität löschen?",
+    "active_warning": "Diese Entität ist noch aktiv. Das Löschen kann nicht rückgängig gemacht werden.",
+    "cancel": "Abbrechen",
+    "delete": "Löschen"
+  },
+  "action_bar": {
+    "pending_changes": "ausstehende Änderungen",
+    "apply_all": "Alle Änderungen anwenden",
+    "applying": "Wird angewendet..."
+  },
+  "settings": {
+    "back_to_manager": "Zurück zum Entity Manager",
+    "page_title": "Entitätstyp-Zuordnungen",
+    "system_language": "Systemsprache:",
+    "type_translations": "Typ-Übersetzungen",
+    "add_mapping": "Zuordnung hinzufügen",
+    "total_types": "Typen gesamt:",
+    "user_overrides": "Benutzer-Überschreibungen:",
+    "search_placeholder": "Nach Key oder Übersetzung suchen...",
+    "filter_all": "Alle Typen",
+    "filter_user": "Benutzer-Überschreibungen",
+    "filter_system": "System-Standards",
+    "th_type_key": "Typ-Key",
+    "th_translation": "Übersetzung",
+    "th_system_default": "System-Standard",
+    "th_source": "Quelle",
+    "th_actions": "Aktionen",
+    "source_user": "Benutzer",
+    "source_system": "System",
+    "edit": "Bearbeiten",
+    "remove_override": "Benutzer-Überschreibung entfernen",
+    "no_results": "Keine Zuordnungen gefunden.",
+    "no_mappings": "Keine Zuordnungen verfügbar.",
+    "modal_add_title": "Typ-Zuordnung hinzufügen",
+    "type_key_label": "Typ-Key",
+    "type_key_placeholder": "z.B. battery, temperature, linkquality",
+    "translation_label": "Deine Übersetzung",
+    "translation_placeholder": "z.B. Batterieladung",
+    "cancel": "Abbrechen",
+    "loading": "Lädt...",
+    "confirm_delete": "Benutzer-Überschreibung für \"{key}\" entfernen? Der System-Standard wird verwendet.",
+    "import_export": "Import / Export",
+    "import_export_hint": "Format: typ_key;übersetzung (eine pro Zeile). Import fügt hinzu oder aktualisiert, ohne bestehende zu löschen.",
+    "import_export_placeholder": "battery;Batterieladung\ntemperature;Temperatur\nlinkquality;Signalstärke",
+    "export": "Exportieren",
+    "import": "Importieren",
+    "exported_count": "{count} Zuordnungen exportiert",
+    "imported_count": "{count} Zuordnungen importiert",
+    "import_partial": "{imported} importiert, {errors} Fehler",
+    "import_empty": "Keine gültigen Zuordnungen zum Importieren"
+  },
+  "type_mappings": {
+    "light": "Licht",
+    "switch": "Schalter",
+    "sensor": "Sensor",
+    "binary_sensor": "Sensor",
+    "climate": "Thermostat",
+    "cover": "Abdeckung",
+    "fan": "Lüfter",
+    "lock": "Schloss",
+    "device_tracker": "Standort",
+    "media_player": "Medienwiedergabe",
+    "camera": "Kamera",
+    "vacuum": "Staubsauger",
+    "button": "Taste",
+    "number": "Einstellung",
+    "select": "Auswahl",
+    "update": "Aktualisierung",
+    "remote": "Fernbedienung",
+    "plant": "Pflanze"
   }
 }

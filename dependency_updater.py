@@ -211,7 +211,9 @@ class DependencyUpdater:
         return False
 
     # ===== MAIN UPDATE =====
-    async def update_all_dependencies(self, old_entity_id: str, new_entity_id: str) -> Dict[str, List[str]]:
+    async def update_all_dependencies(
+        self, old_entity_id: str, new_entity_id: str, cached_states: Optional[List[Dict]] = None
+    ) -> Dict[str, List[str]]:
         """Aktualisiere alle Dependencies"""
         logger.info("=== DependencyUpdater.update_all_dependencies called ===")
         logger.info(f"Old entity: {old_entity_id}, New entity: {new_entity_id}")
@@ -224,9 +226,14 @@ class DependencyUpdater:
             "total_failed": 0,
         }
 
-        logger.info("Fetching states from Home Assistant...")
-        states = await self.get_states()
-        logger.info(f"Got {len(states)} states")
+        # Use cached states if provided, otherwise fetch
+        if cached_states is not None:
+            states = cached_states
+            logger.info(f"Using cached states ({len(states)} states)")
+        else:
+            logger.info("Fetching states from Home Assistant...")
+            states = await self.get_states()
+            logger.info(f"Got {len(states)} states")
 
         # Count automations for debugging
         automation_count = sum(1 for s in states if s["entity_id"].startswith("automation."))

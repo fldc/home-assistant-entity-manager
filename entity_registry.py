@@ -111,6 +111,22 @@ class EntityRegistry:
     async def enable_entity(self, entity_id: str) -> Dict[str, Any]:
         return await self.update_entity(entity_id=entity_id, enable=True)
 
+    async def remove_entity(self, entity_id: str) -> Dict[str, Any]:
+        """Remove an entity from the registry (for orphaned entities)."""
+        message = {"type": "config/entity_registry/remove", "entity_id": entity_id}
+        logger.info(f"Removing entity: {entity_id}")
+
+        msg_id = await self.ws._send_message(message)
+
+        response = await self.ws._receive_message()
+        while response.get("id") != msg_id:
+            response = await self.ws._receive_message()
+
+        if not response.get("success"):
+            raise Exception(f"Failed to remove entity {entity_id}: {response}")
+
+        return {"success": True, "entity_id": entity_id}
+
     def get_disabled_entities(self) -> List[Dict[str, Any]]:
         return [entity for entity in self.entities.values() if entity.get("disabled_by") is not None]
 

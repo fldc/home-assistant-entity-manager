@@ -3,16 +3,27 @@
     "title": "Gestionnaire d'entités",
     "version_badge": "ALPHA",
     "warning_banner": "VERSION ALPHA - DÉVELOPPEMENT UNIQUEMENT",
-    "warning_description": "Ne pas utiliser en production ! Ce module complémentaire est en développement précoce et peut causer des problèmes."
+    "warning_description": "Ne pas utiliser en production ! Ce module complémentaire est en développement précoce et peut causer des problèmes.",
+    "settings": "Paramètres"
+  },
+  "panels": {
+    "areas": "Zones",
+    "devices": "Appareils",
+    "entities": "Entités"
   },
   "filters": {
     "select_area": "Sélectionner une zone...",
     "all_domains": "Tous les domaines",
-    "skip_maintained": "Maintenus",
+    "skip_maintained": "Ignorer les maintenus",
     "only_changes": "Uniquement les changements",
-    "show_disabled": "Désactivés",
+    "show_disabled": "Afficher les désactivés",
     "area_override_label": "Remplacement de zone :",
     "unassigned_area": "Non assigné"
+  },
+  "area": {
+    "name_override_label": "Remplacement du nom de zone",
+    "placeholder": "Nom de zone...",
+    "no_areas": "Aucune zone trouvée"
   },
   "summary": {
     "entities": "Entités",
@@ -55,7 +66,28 @@
     "all_related_entities_note": "Tous les IDs d'entité associés seront ajustés en conséquence",
     "save_cancel_hint": "{save} pour sauvegarder, {cancel} pour annuler",
     "name_already_correct": "Nom déjà correct",
-    "renaming": "Renommage"
+    "renaming": "Renommage",
+    "suffix_label": "Suffixe d'entité :",
+    "suffix_placeholder": "ex. Batterie, Position, Luminosité...",
+    "apply_mapping": "Appliquer la suggestion de type",
+    "revert": "Réinitialiser",
+    "orphan_badge": "Orpheline",
+    "orphan_hint": "L'entité n'est plus fournie par l'intégration",
+    "id_conflict": "Conflit d'ID",
+    "no_change": "OK",
+    "delete_orphan": "Supprimer l'entité orpheline",
+    "delete_entity": "Supprimer l'entité",
+    "apply_rename": "Appliquer le renommage",
+    "enable": "Activer",
+    "no_name": "(sans nom)"
+  },
+  "virtual_devices": {
+    "automations": "Automatisations",
+    "scenes": "Scènes",
+    "scripts": "Scripts",
+    "schedules": "Planifications",
+    "helpers": "Assistants",
+    "other": "Autres"
   },
   "messages": {
     "loading": "Chargement...",
@@ -114,7 +146,15 @@
     "count_plural": "Appareils",
     "current_name": "Nom actuel",
     "new_name": "Nouveau nom",
-    "open_details": "Ouvrir les détails de l'appareil"
+    "open_details": "Ouvrir les détails de l'appareil",
+    "base_name_label": "Nom de base de l'appareil (sans préfixe de zone)",
+    "open_in_ha": "Ouvrir l'appareil dans Home Assistant",
+    "entities_without_device": "Entités sans appareil",
+    "unassigned": "Non assigné",
+    "select_device": "Sélectionner un appareil",
+    "select_area": "Sélectionner une zone",
+    "disabled_badge": "désactivé",
+    "filter_placeholder": "Filtrer les appareils..."
   },
   "units": {
     "entities": "Entités",
@@ -183,5 +223,77 @@
     "water_heater": "Chauffe-eau",
     "weather": "Météo",
     "zone": "Zone"
+  },
+  "delete_modal": {
+    "title": "Supprimer l'entité ?",
+    "active_warning": "Cette entité est toujours active. La suppression ne peut pas être annulée.",
+    "cancel": "Annuler",
+    "delete": "Supprimer"
+  },
+  "action_bar": {
+    "pending_changes": "changements en attente",
+    "apply_all": "Appliquer tous les changements",
+    "applying": "Application..."
+  },
+  "type_mappings": {
+    "light": "Lumière",
+    "switch": "Interrupteur",
+    "sensor": "Capteur",
+    "binary_sensor": "Capteur",
+    "climate": "Thermostat",
+    "cover": "Volet",
+    "fan": "Ventilateur",
+    "lock": "Serrure",
+    "device_tracker": "Localisation",
+    "media_player": "Multimédia",
+    "camera": "Caméra",
+    "vacuum": "Aspirateur",
+    "button": "Bouton",
+    "number": "Réglage",
+    "select": "Sélection",
+    "update": "Mise à jour",
+    "remote": "Télécommande",
+    "plant": "Plante"
+  },
+  "settings": {
+    "back_to_manager": "Retour au Gestionnaire d'Entités",
+    "page_title": "Mappages de Types d'Entité",
+    "system_language": "Langue du Système :",
+    "type_translations": "Traductions de Types",
+    "add_mapping": "Ajouter un Mappage",
+    "total_types": "Types Totaux :",
+    "user_overrides": "Personnalisations Utilisateur :",
+    "search_placeholder": "Rechercher par clé ou traduction...",
+    "filter_all": "Tous les Types",
+    "filter_user": "Personnalisations Utilisateur",
+    "filter_system": "Valeurs par Défaut Système",
+    "th_type_key": "Clé de Type",
+    "th_translation": "Traduction",
+    "th_system_default": "Valeur par Défaut",
+    "th_source": "Source",
+    "th_actions": "Actions",
+    "source_user": "Utilisateur",
+    "source_system": "Système",
+    "edit": "Modifier",
+    "remove_override": "Supprimer la personnalisation utilisateur",
+    "no_results": "Aucun mappage trouvé.",
+    "no_mappings": "Aucun mappage disponible.",
+    "modal_add_title": "Ajouter un Mappage de Type",
+    "type_key_label": "Clé de Type",
+    "type_key_placeholder": "ex. battery, temperature, linkquality",
+    "translation_label": "Votre Traduction",
+    "translation_placeholder": "ex. Charge de Batterie",
+    "cancel": "Annuler",
+    "loading": "Chargement...",
+    "confirm_delete": "Supprimer la personnalisation utilisateur pour « {key} » ? La valeur par défaut système sera utilisée.",
+    "import_export": "Importer / Exporter",
+    "import_export_hint": "Format : clé_type;traduction (une par ligne). L'import ajoute ou met à jour sans supprimer les existants.",
+    "import_export_placeholder": "battery;Niveau de Batterie\ntemperature;Température\nlinkquality;Force du Signal",
+    "export": "Exporter",
+    "import": "Importer",
+    "exported_count": "{count} correspondances exportées",
+    "imported_count": "{count} correspondances importées",
+    "import_partial": "{imported} importées, {errors} erreurs",
+    "import_empty": "Aucune correspondance valide à importer"
   }
 }

@@ -44,6 +44,35 @@ class DeviceRegistry:
             logger.error(f"Error renaming device {device_id}: {str(e)}")
             raise
 
+    async def enable_device(self, device_id: str) -> Dict[str, Any]:
+        """Enable a disabled device"""
+        logger.info(f"Enabling device {device_id}")
+
+        try:
+            msg_id = await self.ws._send_message(
+                {
+                    "type": "config/device_registry/update",
+                    "device_id": device_id,
+                    "disabled_by": None,
+                }
+            )
+
+            response = await self.ws._receive_message()
+            while response.get("id") != msg_id:
+                response = await self.ws._receive_message()
+
+            if not response.get("success"):
+                error_msg = response.get("error", {}).get("message", "Unknown error")
+                logger.error(f"Failed to enable device: {error_msg}")
+                raise Exception(f"Failed to enable device: {error_msg}")
+
+            logger.info(f"Successfully enabled device {device_id}")
+            return {"success": True, "device_id": device_id}
+
+        except Exception as e:
+            logger.error(f"Error enabling device {device_id}: {str(e)}")
+            raise
+
     async def get_device(self, device_id: str) -> Optional[Dict[str, Any]]:
         """Holt Geräteinformationen"""
         try:

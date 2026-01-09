@@ -1,0 +1,869 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings - Entity Manager</title>
+    <link href="static/css/styles.css?v={{ version }}" rel="stylesheet">
+    <link href="static/css/remixicon.css?v={{ version }}" rel="stylesheet">
+    <script src="static/js/translations.js?v={{ version }}"></script>
+    <script src="static/js/config.js?v={{ version }}"></script>
+    <script defer src="static/js/alpine.min.js"></script>
+    <style>
+        .settings-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .settings-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .settings-header h1 {
+            margin: 0;
+            font-size: 1.5rem;
+            color: #111827;
+        }
+
+        .back-link {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: #6b7280;
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: color 0.15s ease;
+        }
+
+        .back-link:hover {
+            color: #3b82f6;
+        }
+
+        .mapping-section {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 20px;
+            background: #f9fafb;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .section-header h2 {
+            margin: 0;
+            font-size: 1.1rem;
+            color: #374151;
+        }
+
+        .add-btn {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 16px;
+            background: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: background 0.15s ease;
+        }
+
+        .add-btn:hover {
+            background: #2563eb;
+        }
+
+        .mappings-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .mappings-table th {
+            text-align: left;
+            padding: 12px 20px;
+            background: #f9fafb;
+            font-weight: 500;
+            color: #6b7280;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .mappings-table td {
+            padding: 12px 20px;
+            border-bottom: 1px solid #f3f4f6;
+            vertical-align: middle;
+        }
+
+        .mappings-table tr:hover {
+            background: #f9fafb;
+        }
+
+        .type-key {
+            font-family: monospace;
+            font-size: 0.9rem;
+            color: #374151;
+            background: #f3f4f6;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+
+        .translation-value {
+            color: #111827;
+        }
+
+        .system-default {
+            color: #6b7280;
+            font-style: italic;
+        }
+
+        .user-override {
+            color: #059669;
+            font-weight: 500;
+        }
+
+        .user-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 2px 8px;
+            background: #d1fae5;
+            color: #059669;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .system-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 2px 8px;
+            background: #e5e7eb;
+            color: #6b7280;
+            border-radius: 12px;
+            font-size: 0.75rem;
+        }
+
+        .action-btns {
+            display: flex;
+            gap: 8px;
+        }
+
+        .action-btn {
+            padding: 6px 10px;
+            background: transparent;
+            border: 1px solid #e5e7eb;
+            border-radius: 4px;
+            cursor: pointer;
+            color: #6b7280;
+            transition: all 0.15s ease;
+        }
+
+        .action-btn:hover {
+            background: #f3f4f6;
+            color: #374151;
+        }
+
+        .action-btn.delete:hover {
+            background: #fee2e2;
+            color: #dc2626;
+            border-color: #fecaca;
+        }
+
+        .edit-input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #3b82f6;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            outline: none;
+        }
+
+        .edit-input:focus {
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+        }
+
+        .save-cancel-btns {
+            display: flex;
+            gap: 6px;
+        }
+
+        .save-btn {
+            padding: 6px 12px;
+            background: #10b981;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85rem;
+        }
+
+        .save-btn:hover {
+            background: #059669;
+        }
+
+        .cancel-btn {
+            padding: 6px 12px;
+            background: #f3f4f6;
+            color: #374151;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85rem;
+        }
+
+        .cancel-btn:hover {
+            background: #e5e7eb;
+        }
+
+        /* Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+        }
+
+        .modal {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            width: 400px;
+            max-width: 90vw;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+        }
+
+        .modal h3 {
+            margin: 0 0 20px 0;
+            color: #111827;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 500;
+            color: #374151;
+            font-size: 0.9rem;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 0.95rem;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+        }
+
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 24px;
+        }
+
+        .btn-primary {
+            padding: 10px 20px;
+            background: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        .btn-primary:hover {
+            background: #2563eb;
+        }
+
+        .btn-secondary {
+            padding: 10px 20px;
+            background: #f3f4f6;
+            color: #374151;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        .btn-secondary:hover {
+            background: #e5e7eb;
+        }
+
+        /* Filter/Search */
+        .filter-bar {
+            display: flex;
+            gap: 12px;
+            padding: 16px 20px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .search-input {
+            flex: 1;
+            padding: 10px 14px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 0.9rem;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #3b82f6;
+        }
+
+        .filter-select {
+            padding: 10px 14px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            background: white;
+        }
+
+        .empty-state {
+            padding: 40px 20px;
+            text-align: center;
+            color: #6b7280;
+        }
+
+        .empty-state i {
+            font-size: 3rem;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+
+        .stats-bar {
+            display: flex;
+            gap: 20px;
+            padding: 12px 20px;
+            background: #f9fafb;
+            font-size: 0.85rem;
+            color: #6b7280;
+        }
+
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .stat-value {
+            font-weight: 600;
+            color: #374151;
+        }
+
+        .language-selector {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .language-selector label {
+            font-size: 0.9rem;
+            color: #6b7280;
+        }
+    </style>
+</head>
+<body>
+    <div x-data="settingsManager()" x-init="init()" class="settings-container">
+        <!-- Header -->
+        <div class="settings-header">
+            <div>
+                <a href="./" class="back-link">
+                    <i class="ri-arrow-left-line"></i>
+                    <span x-text="t('settings.back_to_manager')">Back to Entity Manager</span>
+                </a>
+                <h1 x-text="t('settings.page_title')">Entity Type Mappings</h1>
+            </div>
+            <div class="language-selector">
+                <label x-text="t('settings.system_language')">System Language:</label>
+                <select class="filter-select" x-model="language" @change="loadMappings()">
+                    <option value="en">English</option>
+                    <option value="de">Deutsch</option>
+                    <option value="es">Español</option>
+                    <option value="fr">Français</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Main Section -->
+        <div class="mapping-section">
+            <div class="section-header">
+                <h2>
+                    <i class="ri-translate-2"></i>
+                    <span x-text="t('settings.type_translations')">Type Translations</span>
+                </h2>
+                <button class="add-btn" @click="showAddModal = true">
+                    <i class="ri-add-line"></i>
+                    <span x-text="t('settings.add_mapping')">Add Mapping</span>
+                </button>
+            </div>
+
+            <!-- Stats -->
+            <div class="stats-bar">
+                <div class="stat-item">
+                    <span x-text="t('settings.total_types')">Total Types:</span>
+                    <span class="stat-value" x-text="mappings.length"></span>
+                </div>
+                <div class="stat-item">
+                    <span x-text="t('settings.user_overrides')">User Overrides:</span>
+                    <span class="stat-value" x-text="userMappingCount"></span>
+                </div>
+            </div>
+
+            <!-- Filter -->
+            <div class="filter-bar">
+                <input type="text"
+                       class="search-input"
+                       :placeholder="t('settings.search_placeholder')"
+                       x-model="searchQuery"
+                       @input="filterMappings()">
+                <select class="filter-select" x-model="filterType" @change="filterMappings()">
+                    <option value="all" x-text="t('settings.filter_all')">All Types</option>
+                    <option value="user" x-text="t('settings.filter_user')">User Overrides</option>
+                    <option value="system" x-text="t('settings.filter_system')">System Defaults</option>
+                </select>
+            </div>
+
+            <!-- Table -->
+            <table class="mappings-table" x-show="filteredMappings.length > 0">
+                <thead>
+                    <tr>
+                        <th style="width: 25%" x-text="t('settings.th_type_key')">Type Key</th>
+                        <th style="width: 30%" x-text="t('settings.th_translation')">Translation</th>
+                        <th style="width: 25%" x-text="t('settings.th_system_default')">System Default</th>
+                        <th style="width: 10%" x-text="t('settings.th_source')">Source</th>
+                        <th style="width: 10%" x-text="t('settings.th_actions')">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <template x-for="mapping in filteredMappings" :key="mapping.key">
+                        <tr>
+                            <td>
+                                <span class="type-key" x-text="mapping.key"></span>
+                            </td>
+                            <td>
+                                <template x-if="editingKey !== mapping.key">
+                                    <span :class="mapping.has_user_override ? 'user-override' : 'translation-value'"
+                                          x-text="mapping.effective_value"></span>
+                                </template>
+                                <template x-if="editingKey === mapping.key">
+                                    <input type="text"
+                                           class="edit-input"
+                                           x-model="editValue"
+                                           @keydown.enter="saveEdit(mapping.key)"
+                                           @keydown.escape="cancelEdit()">
+                                </template>
+                            </td>
+                            <td>
+                                <span class="system-default" x-text="mapping.system_default || '—'"></span>
+                            </td>
+                            <td>
+                                <template x-if="mapping.has_user_override">
+                                    <span class="user-badge">
+                                        <i class="ri-user-line"></i> <span x-text="t('settings.source_user')">User</span>
+                                    </span>
+                                </template>
+                                <template x-if="!mapping.has_user_override">
+                                    <span class="system-badge">
+                                        <i class="ri-settings-3-line"></i> <span x-text="t('settings.source_system')">System</span>
+                                    </span>
+                                </template>
+                            </td>
+                            <td>
+                                <template x-if="editingKey !== mapping.key">
+                                    <div class="action-btns">
+                                        <button class="action-btn"
+                                                @click="startEdit(mapping)"
+                                                :title="t('settings.edit')">
+                                            <i class="ri-pencil-line"></i>
+                                        </button>
+                                        <button class="action-btn delete"
+                                                @click="deleteMapping(mapping.key)"
+                                                x-show="mapping.has_user_override"
+                                                :title="t('settings.remove_override')">
+                                            <i class="ri-delete-bin-line"></i>
+                                        </button>
+                                    </div>
+                                </template>
+                                <template x-if="editingKey === mapping.key">
+                                    <div class="save-cancel-btns">
+                                        <button class="save-btn" @click="saveEdit(mapping.key)">
+                                            <i class="ri-check-line"></i>
+                                        </button>
+                                        <button class="cancel-btn" @click="cancelEdit()">
+                                            <i class="ri-close-line"></i>
+                                        </button>
+                                    </div>
+                                </template>
+                            </td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+
+            <!-- Empty State -->
+            <div class="empty-state" x-show="filteredMappings.length === 0">
+                <i class="ri-search-line"></i>
+                <p x-text="searchQuery ? t('settings.no_results') : t('settings.no_mappings')"></p>
+            </div>
+        </div>
+
+        <!-- Import/Export Section -->
+        <div class="mapping-section" style="margin-top: 24px;">
+            <div class="section-header">
+                <h2>
+                    <i class="ri-upload-download-line"></i>
+                    <span x-text="t('settings.import_export')">Import / Export</span>
+                </h2>
+            </div>
+            <div style="padding: 20px;">
+                <p style="color: #6b7280; font-size: 0.9rem; margin-bottom: 16px;" x-text="t('settings.import_export_hint')">
+                    Format: type_key;translation (one per line). Import adds or updates mappings without deleting existing ones.
+                </p>
+                <textarea x-model="importExportText"
+                          style="width: 100%; height: 200px; font-family: monospace; font-size: 0.9rem; padding: 12px; border: 1px solid #d1d5db; border-radius: 6px; resize: vertical;"
+                          :placeholder="t('settings.import_export_placeholder')"></textarea>
+                <div style="display: flex; gap: 12px; margin-top: 12px;">
+                    <button class="add-btn" @click="exportMappings()" style="background: #6b7280;">
+                        <i class="ri-download-line"></i>
+                        <span x-text="t('settings.export')">Export</span>
+                    </button>
+                    <button class="add-btn" @click="importMappings()" :disabled="!importExportText.trim()">
+                        <i class="ri-upload-line"></i>
+                        <span x-text="t('settings.import')">Import</span>
+                    </button>
+                    <span x-show="importResult"
+                          :class="importResult.success ? 'text-green-600' : 'text-red-600'"
+                          style="display: flex; align-items: center; margin-left: auto; font-size: 0.9rem;"
+                          x-text="importResult.message"></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add Modal -->
+        <div class="modal-overlay" x-show="showAddModal" x-cloak @click.self="showAddModal = false">
+            <div class="modal">
+                <h3>
+                    <i class="ri-add-circle-line"></i>
+                    <span x-text="t('settings.modal_add_title')">Add Type Mapping</span>
+                </h3>
+                <div class="form-group">
+                    <label for="newKey" x-text="t('settings.type_key_label')">Type Key</label>
+                    <input type="text"
+                           id="newKey"
+                           x-model="newMapping.key"
+                           :placeholder="t('settings.type_key_placeholder')">
+                </div>
+                <div class="form-group">
+                    <label for="newTranslation" x-text="t('settings.translation_label')">Your Translation</label>
+                    <input type="text"
+                           id="newTranslation"
+                           x-model="newMapping.translation"
+                           :placeholder="t('settings.translation_placeholder')">
+                </div>
+                <div class="modal-actions">
+                    <button class="btn-secondary" @click="showAddModal = false; resetNewMapping()">
+                        <span x-text="t('settings.cancel')">Cancel</span>
+                    </button>
+                    <button class="btn-primary"
+                            @click="addMapping()"
+                            :disabled="!newMapping.key || !newMapping.translation">
+                        <span x-text="t('settings.add_mapping')">Add Mapping</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading Overlay -->
+        <div class="modal-overlay" x-show="loading" x-cloak>
+            <div style="text-align: center; color: white;">
+                <i class="ri-loader-4-line" style="font-size: 2rem; animation: spin 1s linear infinite;"></i>
+                <p x-text="t('settings.loading')">Loading...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function settingsManager() {
+            return {
+                mappings: [],
+                filteredMappings: [],
+                userMappingCount: 0,
+                language: 'de',
+                searchQuery: '',
+                filterType: 'all',
+                editingKey: null,
+                editValue: '',
+                showAddModal: false,
+                newMapping: { key: '', translation: '' },
+                loading: false,
+                translationsReady: false,
+                importExportText: '',
+                importResult: null,
+
+                // Translation function with reactivity
+                t(key, params) {
+                    // Access translationsReady to make Alpine track this dependency
+                    if (this.translationsReady && window.translations) {
+                        return window.translations.t(key, params);
+                    }
+                    return key;
+                },
+
+                async init() {
+                    // Initialize translations
+                    if (window.translations) {
+                        await window.translations.init();
+                        this.translationsReady = true;
+                        // Set HTML lang attribute dynamically
+                        document.documentElement.lang = window.translations.currentLanguage || 'en';
+                    }
+                    await this.loadMappings();
+                },
+
+                async loadMappings() {
+                    this.loading = true;
+                    try {
+                        const response = await fetch(`api/type_mappings?lang=${this.language}`);
+                        const data = await response.json();
+                        this.mappings = data.mappings || [];
+                        this.userMappingCount = data.user_mapping_count || 0;
+                        this.filterMappings();
+                    } catch (error) {
+                        console.error('Error loading mappings:', error);
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+
+                filterMappings() {
+                    let result = [...this.mappings];
+
+                    // Filter by type
+                    if (this.filterType === 'user') {
+                        result = result.filter(m => m.has_user_override);
+                    } else if (this.filterType === 'system') {
+                        result = result.filter(m => !m.has_user_override);
+                    }
+
+                    // Filter by search query
+                    if (this.searchQuery) {
+                        const query = this.searchQuery.toLowerCase();
+                        result = result.filter(m =>
+                            m.key.toLowerCase().includes(query) ||
+                            (m.effective_value && m.effective_value.toLowerCase().includes(query)) ||
+                            (m.system_default && m.system_default.toLowerCase().includes(query))
+                        );
+                    }
+
+                    // Sort: user overrides first, then alphabetically
+                    result.sort((a, b) => {
+                        if (a.has_user_override && !b.has_user_override) return -1;
+                        if (!a.has_user_override && b.has_user_override) return 1;
+                        return a.key.localeCompare(b.key);
+                    });
+
+                    this.filteredMappings = result;
+                },
+
+                startEdit(mapping) {
+                    this.editingKey = mapping.key;
+                    this.editValue = mapping.has_user_override ? mapping.effective_value : '';
+                },
+
+                cancelEdit() {
+                    this.editingKey = null;
+                    this.editValue = '';
+                },
+
+                async saveEdit(key) {
+                    if (!this.editValue.trim()) {
+                        this.cancelEdit();
+                        return;
+                    }
+
+                    try {
+                        const response = await fetch('api/type_mappings/user', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                type_key: key,
+                                translation: this.editValue.trim()
+                            })
+                        });
+
+                        if (response.ok) {
+                            await this.loadMappings();
+                        } else {
+                            const error = await response.json();
+                            alert('Error: ' + (error.error || 'Unknown error'));
+                        }
+                    } catch (error) {
+                        console.error('Error saving mapping:', error);
+                    } finally {
+                        this.cancelEdit();
+                    }
+                },
+
+                async deleteMapping(key) {
+                    const confirmMsg = this.t('settings.confirm_delete', { key: key });
+                    if (!confirm(confirmMsg)) {
+                        return;
+                    }
+
+                    try {
+                        const response = await fetch(`api/type_mappings/user/${encodeURIComponent(key)}`, {
+                            method: 'DELETE'
+                        });
+
+                        if (response.ok) {
+                            await this.loadMappings();
+                        } else {
+                            const error = await response.json();
+                            alert('Error: ' + (error.error || 'Unknown error'));
+                        }
+                    } catch (error) {
+                        console.error('Error deleting mapping:', error);
+                    }
+                },
+
+                async addMapping() {
+                    if (!this.newMapping.key || !this.newMapping.translation) {
+                        return;
+                    }
+
+                    try {
+                        const response = await fetch('api/type_mappings/user', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                type_key: this.newMapping.key.trim(),
+                                translation: this.newMapping.translation.trim()
+                            })
+                        });
+
+                        if (response.ok) {
+                            this.showAddModal = false;
+                            this.resetNewMapping();
+                            await this.loadMappings();
+                        } else {
+                            const error = await response.json();
+                            alert('Error: ' + (error.error || 'Unknown error'));
+                        }
+                    } catch (error) {
+                        console.error('Error adding mapping:', error);
+                    }
+                },
+
+                resetNewMapping() {
+                    this.newMapping = { key: '', translation: '' };
+                },
+
+                // Export all user mappings to textarea
+                exportMappings() {
+                    const userMappings = this.mappings.filter(m => m.has_user_override);
+                    const lines = userMappings.map(m => `${m.key};${m.effective_value}`);
+                    this.importExportText = lines.join('\n');
+                    this.importResult = {
+                        success: true,
+                        message: this.t('settings.exported_count', { count: userMappings.length })
+                    };
+                    setTimeout(() => this.importResult = null, 3000);
+                },
+
+                // Import mappings from textarea (upsert, no purge)
+                async importMappings() {
+                    const lines = this.importExportText.trim().split('\n').filter(l => l.trim());
+                    if (lines.length === 0) {
+                        this.importResult = { success: false, message: this.t('settings.import_empty') };
+                        return;
+                    }
+
+                    let imported = 0;
+                    let errors = 0;
+
+                    for (const line of lines) {
+                        const parts = line.split(';');
+                        if (parts.length < 2) {
+                            errors++;
+                            continue;
+                        }
+
+                        const key = parts[0].trim();
+                        const translation = parts.slice(1).join(';').trim(); // Allow ; in translation
+
+                        if (!key || !translation) {
+                            errors++;
+                            continue;
+                        }
+
+                        try {
+                            const response = await fetch('api/type_mappings/user', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ type_key: key, translation: translation })
+                            });
+                            if (response.ok) {
+                                imported++;
+                            } else {
+                                errors++;
+                            }
+                        } catch (e) {
+                            errors++;
+                        }
+                    }
+
+                    await this.loadMappings();
+
+                    if (errors > 0) {
+                        this.importResult = {
+                            success: false,
+                            message: this.t('settings.import_partial', { imported, errors })
+                        };
+                    } else {
+                        this.importExportText = ''; // Clear textarea on success
+                        this.importResult = {
+                            success: true,
+                            message: this.t('settings.imported_count', { count: imported })
+                        };
+                    }
+                    setTimeout(() => this.importResult = null, 5000);
+                }
+            };
+        }
+    </script>
+
+    <style>
+        [x-cloak] { display: none !important; }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</body>
+</html>

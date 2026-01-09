@@ -15,19 +15,16 @@ class TranslationManager {
     async init() {
         // Try to get language from Home Assistant
         const haLang = await this.getHALanguage();
-        console.log('HA Language:', haLang);
-        
+
         // Fallback to browser language
         const browserLang = navigator.language || navigator.userLanguage || 'en';
-        console.log('Browser Language:', browserLang);
-        
+
         // Use HA language if available, otherwise browser language
         const lang = haLang || browserLang.split('-')[0];
-        console.log('Selected Language:', lang);
-        
+
         // Load translations
         await this.loadLanguage(lang);
-        
+
         return this;
     }
 
@@ -36,16 +33,15 @@ class TranslationManager {
      */
     async getHALanguage() {
         try {
-            // This would need to be implemented based on how your addon can access HA config
-            // For now, we'll check if there's a lang parameter in the URL or localStorage
+            // Check if there's a lang parameter in the URL or localStorage
             const urlParams = new URLSearchParams(window.location.search);
             const urlLang = urlParams.get('lang');
             if (urlLang) return urlLang;
-            
+
             // Check localStorage
             const storedLang = localStorage.getItem('entityManagerLang');
             if (storedLang) return storedLang;
-            
+
             return null;
         } catch (e) {
             console.error('Error getting HA language:', e);
@@ -58,20 +54,14 @@ class TranslationManager {
      */
     async loadLanguage(lang) {
         try {
-            // Try to load the requested language
-            console.log(`Loading language: ${lang}`);
-            const url = `static/translations/${lang}.json`;
-            console.log(`Fetching from: ${url}`);
+            const cacheBuster = Date.now();
+            const url = `static/translations/${lang}.json?v=${cacheBuster}`;
             const response = await fetch(url);
-            console.log(`Response status: ${response.status}`);
             if (response.ok) {
                 this.translations = await response.json();
                 this.currentLang = lang;
                 localStorage.setItem('entityManagerLang', lang);
-                console.log('Translations loaded:', this.translations);
             } else {
-                console.log(`Failed to load ${lang}, falling back to English`);
-                // Fallback to English
                 await this.loadFallback();
             }
         } catch (error) {
@@ -85,7 +75,8 @@ class TranslationManager {
      */
     async loadFallback() {
         try {
-            const response = await fetch(`static/translations/${this.fallbackLang}.json`);
+            const cacheBuster = Date.now();
+            const response = await fetch(`static/translations/${this.fallbackLang}.json?v=${cacheBuster}`);
             if (response.ok) {
                 this.translations = await response.json();
                 this.currentLang = this.fallbackLang;
@@ -105,23 +96,22 @@ class TranslationManager {
     t(key, params = {}) {
         const keys = key.split('.');
         let value = this.translations;
-        
+
         for (const k of keys) {
             if (value && typeof value === 'object' && k in value) {
                 value = value[k];
             } else {
-                console.warn(`Translation key not found: ${key}`);
                 return key; // Return the key if translation not found
             }
         }
-        
+
         // Replace parameters like {count}
         if (typeof value === 'string') {
             return value.replace(/{(\w+)}/g, (match, param) => {
                 return params[param] !== undefined ? params[param] : match;
             });
         }
-        
+
         return value;
     }
 
@@ -133,15 +123,27 @@ class TranslationManager {
     }
 
     /**
-     * Get available languages by checking which translation files exist
+     * Current language getter for easy access
+     */
+    get currentLanguage() {
+        return this.currentLang;
+    }
+
+    /**
+     * Get available languages from backend
      */
     async getAvailableLanguages() {
-        // This would need to be provided by the backend
-        // For now, return the languages we know we have
-        return [
-            { code: 'en', name: 'English' },
-            { code: 'de', name: 'Deutsch' }
-        ];
+        try {
+            const response = await fetch('api/languages');
+            if (response.ok) {
+                const data = await response.json();
+                return data.languages || [];
+            }
+        } catch (error) {
+            console.error('Error fetching available languages:', error);
+        }
+        // Fallback
+        return [{ code: 'en', name: 'English' }];
     }
 
     /**

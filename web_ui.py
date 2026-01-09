@@ -3,12 +3,16 @@
 Web UI für Home Assistant Entity Renamer - Add-on Version
 """
 import asyncio
+import html
 import json
 import logging
 import os
+import re
+import time
+import unicodedata
 
 import aiohttp
-from flask import Flask, jsonify, render_template, request, send_from_directory
+from flask import Flask, jsonify, make_response, render_template, request, send_from_directory
 from flask_cors import CORS
 from werkzeug.middleware.proxy_fix import ProxyFix
 
@@ -19,6 +23,7 @@ from entity_restructurer import EntityRestructurer
 from ha_client import HomeAssistantClient
 from ha_websocket import HomeAssistantWebSocket
 from naming_overrides import NamingOverrides
+from type_mappings import TypeMappings
 
 # Don't load .env in Add-on mode - use environment variables from Supervisor
 # load_dotenv()
@@ -52,19 +57,159 @@ renamer_state = {
     "entities_by_area": {},
     "proposed_changes": {},
     "naming_overrides": NamingOverrides("/data/naming_overrides.json"),
+    "type_mappings": TypeMappings(user_mappings_path="/data/user_type_mappings.json"),
 }
 
 
+# =============================================================================
+# Input Sanitization
+# =============================================================================
+
+# Maximum lengths for different input types
+MAX_NAME_LENGTH = 255
+MAX_ENTITY_ID_LENGTH = 255
+MAX_REGISTRY_ID_LENGTH = 64
+
+# Valid characters for entity IDs (Home Assistant format: domain.object_id)
+ENTITY_ID_PATTERN = re.compile(r"^[a-z][a-z0-9_]*\.[a-z0-9_]+$")
+
+# Valid characters for registry IDs (typically alphanumeric with some special chars)
+REGISTRY_ID_PATTERN = re.compile(r"^[a-zA-Z0-9_-]+$")
+
+
+def sanitize_string(value: str, max_length: int = MAX_NAME_LENGTH) -> str:
+    """
+    Sanitize a general string input.
+    - Strips whitespace
+    - Removes control characters
+    - Escapes HTML entities
+    - Limits length
+    """
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        value = str(value)
+
+    # Strip whitespace
+    value = value.strip()
+
+    # Remove control characters (keep newlines and tabs for multi-line text)
+    value = "".join(
+        char for char in value
+        if unicodedata.category(char) != "Cc" or char in "\n\t"
+    )
+
+    # Remove null bytes and other dangerous characters
+    value = value.replace("\x00", "")
+
+    # Limit length
+    value = value[:max_length]
+
+    return value
+
+
+def sanitize_name(value: str, max_length: int = MAX_NAME_LENGTH) -> str:
+    """
+    Sanitize a display name (friendly name, area name, device name).
+    - All general sanitization
+    - Escape HTML to prevent XSS
+    - Remove script tags and event handlers
+    """
+    value = sanitize_string(value, max_length)
+    if value is None:
+        return None
+
+    # Remove any script tags or event handlers (case insensitive)
+    value = re.sub(r"<script[^>]*>.*?</script>", "", value, flags=re.IGNORECASE | re.DOTALL)
+    value = re.sub(r"on\w+\s*=", "", value, flags=re.IGNORECASE)
+
+    # Escape HTML entities to prevent XSS
+    value = html.escape(value, quote=True)
+
+    return value
+
+
+def sanitize_entity_id(value: str) -> str:
+    """
+    Sanitize and validate an entity ID.
+    Entity IDs must be lowercase, alphanumeric with underscores, in format domain.object_id
+    """
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        return None
+
+    # Strip and lowercase
+    value = value.strip().lower()
+
+    # Limit length
+    value = value[:MAX_ENTITY_ID_LENGTH]
+
+    # Replace spaces and hyphens with underscores
+    value = value.replace(" ", "_").replace("-", "_")
+
+    # Remove any characters that aren't valid
+    value = re.sub(r"[^a-z0-9_.]", "", value)
+
+    # Validate format
+    if not ENTITY_ID_PATTERN.match(value):
+        return None
+
+    return value
+
+
+def sanitize_registry_id(value: str) -> str:
+    """
+    Sanitize and validate a registry ID.
+    """
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        return None
+
+    # Strip whitespace
+    value = value.strip()
+
+    # Limit length
+    value = value[:MAX_REGISTRY_ID_LENGTH]
+
+    # Validate format (alphanumeric, underscore, hyphen)
+    if not REGISTRY_ID_PATTERN.match(value):
+        return None
+
+    return value
+
+
+def validate_json_input(data: dict, required_fields: list = None) -> tuple:
+    """
+    Validate that JSON input is a dict and has required fields.
+    Returns (is_valid, error_message)
+    """
+    if not isinstance(data, dict):
+        return False, "Invalid JSON input"
+
+    if required_fields:
+        missing = [f for f in required_fields if f not in data]
+        if missing:
+            return False, f"Missing required fields: {', '.join(missing)}"
+
+    return True, None
+
+
 async def init_client():
-    """Initialisiere den Home Assistant Client"""
+    """Initialize the Home Assistant client and restructurer."""
     if not renamer_state["client"]:
         # In Add-on mode, use Supervisor API
         base_url = os.getenv("HA_URL", "http://supervisor/core")
         token = os.getenv("HA_TOKEN", os.getenv("SUPERVISOR_TOKEN"))
-        logger.info("⚠️  ALPHA VERSION - Entity Manager Add-on")
+        logger.info("ALPHA VERSION - Entity Manager Add-on")
         logger.info(f"Connecting to Home Assistant at {base_url}")
         renamer_state["client"] = HomeAssistantClient(base_url, token)
-        renamer_state["restructurer"] = EntityRestructurer(renamer_state["client"], renamer_state["naming_overrides"])
+        renamer_state["restructurer"] = EntityRestructurer(
+            renamer_state["client"],
+            renamer_state["naming_overrides"],
+            type_mappings=renamer_state["type_mappings"],
+        )
     return renamer_state["client"]
 
 
@@ -196,62 +341,79 @@ async def load_areas_and_entities():
             if domain not in entities_by_area[area_name]["domains"]:
                 entities_by_area[area_name]["domains"][domain] = []
 
+            # Check if entity is orphan (restored from storage but no longer provided by integration)
+            attributes = state.get("attributes", {})
+            is_orphan = attributes.get("restored", False) == True
+
             entities_by_area[area_name]["domains"][domain].append(
                 {
                     "entity_id": entity_id,
-                    "friendly_name": state.get("attributes", {}).get("friendly_name", entity_id),
+                    "friendly_name": attributes.get("friendly_name", entity_id),
                     "state": state.get("state", "unknown"),
+                    "is_orphan": is_orphan,
                 }
             )
 
             # Count for debug
             entities_by_area_count[area_name] = entities_by_area_count.get(area_name, 0) + 1
 
-        # Now process disabled entities from entity registry
-        logger.info("Processing disabled entities from registry...")
+        # Now process disabled AND orphan entities from entity registry
+        logger.info("Processing disabled and orphan entities from registry...")
         disabled_count = 0
+        orphan_count = 0
+
+        # Build set of entity_ids that have state (for faster lookup)
+        entities_with_state = set()
+        for area_data in entities_by_area.values():
+            for domain_entities in area_data["domains"].values():
+                for e in domain_entities:
+                    entities_with_state.add(e["entity_id"])
+
         for entity_id, entity_reg in renamer_state["restructurer"].entities.items():
-            # Skip if already processed (enabled entities)
-            if any(
-                entity_id == e["entity_id"]
-                for area_data in entities_by_area.values()
-                for entities in area_data["domains"].values()
-                for e in entities
-            ):
+            # Skip if already processed (entities with state)
+            if entity_id in entities_with_state:
                 continue
 
-            # Check if entity is disabled
-            if entity_reg.get("disabled_by") is not None:
+            # Entity is in registry but has no state - either disabled or orphan
+            is_disabled = entity_reg.get("disabled_by") is not None
+            is_orphan = not is_disabled  # No state AND not disabled = orphan
+
+            if is_disabled:
                 disabled_count += 1
-                domain = entity_id.split(".")[0]
-                area_name = UNASSIGNED_AREA
+            else:
+                orphan_count += 1
 
-                # Find area from device or entity registry
-                device_id = entity_reg.get("device_id")
-                if device_id and device_id in renamer_state["restructurer"].devices:
-                    device = renamer_state["restructurer"].devices[device_id]
-                    if device.get("area_id") and device["area_id"] in areas_dict:
-                        area_name = areas_dict[device["area_id"]]
-                elif entity_reg.get("area_id") and entity_reg["area_id"] in areas_dict:
-                    area_name = areas_dict[entity_reg["area_id"]]
+            domain = entity_id.split(".")[0]
+            area_name = UNASSIGNED_AREA
 
-                # Add to entities_by_area
-                if domain not in entities_by_area[area_name]["domains"]:
-                    entities_by_area[area_name]["domains"][domain] = []
+            # Find area from device or entity registry
+            device_id = entity_reg.get("device_id")
+            if device_id and device_id in renamer_state["restructurer"].devices:
+                device = renamer_state["restructurer"].devices[device_id]
+                if device.get("area_id") and device["area_id"] in areas_dict:
+                    area_name = areas_dict[device["area_id"]]
+            elif entity_reg.get("area_id") and entity_reg["area_id"] in areas_dict:
+                area_name = areas_dict[entity_reg["area_id"]]
 
-                entities_by_area[area_name]["domains"][domain].append(
-                    {
-                        "entity_id": entity_id,
-                        "friendly_name": entity_reg.get("name") or entity_reg.get("original_name") or entity_id,
-                        "state": "disabled",
-                        "disabled_by": entity_reg.get("disabled_by"),
-                    }
-                )
+            # Add to entities_by_area
+            if domain not in entities_by_area[area_name]["domains"]:
+                entities_by_area[area_name]["domains"][domain] = []
 
-                # Update count
-                entities_by_area_count[area_name] = entities_by_area_count.get(area_name, 0) + 1
+            entities_by_area[area_name]["domains"][domain].append(
+                {
+                    "entity_id": entity_id,
+                    "friendly_name": entity_reg.get("name") or entity_reg.get("original_name") or entity_id,
+                    "state": "orphan" if is_orphan else "disabled",
+                    "disabled_by": entity_reg.get("disabled_by"),
+                    "is_orphan": is_orphan,
+                }
+            )
+
+            # Update count
+            entities_by_area_count[area_name] = entities_by_area_count.get(area_name, 0) + 1
 
         logger.info(f"Added {disabled_count} disabled entities from registry")
+        logger.info(f"Added {orphan_count} orphan entities from registry")
 
         # Debug Output
         logger.info("Entity distribution by area:")
@@ -273,11 +435,14 @@ async def load_areas_and_entities():
 @app.route("/")
 def index():
     """Hauptseite"""
-    import time
-
     # Use timestamp for cache busting
     version = str(int(time.time()))
-    return render_template("index.html", version=version)
+    response = make_response(render_template("index.html", version=version))
+    # Prevent browser from caching the HTML page
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    return response
 
 
 @app.route("/test")
@@ -306,6 +471,38 @@ def serve_js(filename):
 def serve_translations(filename):
     """Serve translation files"""
     return send_from_directory("translations/ui", filename)
+
+
+@app.route("/api/languages")
+def get_available_languages():
+    """Return available UI languages based on translation files"""
+    import glob
+
+    # Language display names
+    language_names = {
+        "en": "English",
+        "de": "Deutsch",
+        "es": "Español",
+        "fr": "Français",
+        "it": "Italiano",
+        "nl": "Nederlands",
+        "pt": "Português",
+        "pl": "Polski",
+        "ru": "Русский",
+        "zh": "中文",
+        "ja": "日本語",
+        "ko": "한국어",
+    }
+
+    languages = []
+    translation_files = glob.glob("translations/ui/*.json")
+
+    for filepath in sorted(translation_files):
+        code = os.path.basename(filepath).replace(".json", "")
+        name = language_names.get(code, code.upper())
+        languages.append({"code": code, "name": name})
+
+    return jsonify({"languages": languages})
 
 
 @app.route("/test/css-info")
@@ -363,21 +560,11 @@ async def _get_areas_async():
             if area_data["domains"]:  # Nur Areas mit Entities
                 area_id = area_name_to_id.get(area_name, None)
 
-                # Get override if available
-                area_override = None
-                override_name = area_name
-                if area_id:
-                    area_override = renamer_state["naming_overrides"].get_area_override(area_id)
-                    if area_override:
-                        override_name = area_override.get("name", area_name)
-
                 areas_data.append(
                     {
                         "name": area_name,
-                        "display_name": override_name,
+                        "display_name": area_name,
                         "area_id": area_id,
-                        "has_override": area_override is not None,
-                        "override_name": (area_override.get("name") if area_override else None),
                         "domains": sorted(list(area_data["domains"].keys())),
                         "entity_count": sum(len(entities) for entities in area_data["domains"].values()),
                     }
@@ -520,11 +707,10 @@ async def _preview_changes_async():
             # Get registry ID for entity
             registry_id = entity_reg.get("id", "")  # The immutable UUID
 
-            # Hole Overrides
+            # Hole Entity Override (nur für Entity-Suffixe)
             entity_override = (
                 renamer_state["naming_overrides"].get_entity_override(registry_id) if registry_id else None
             )
-            device_override = renamer_state["naming_overrides"].get_device_override(device_id) if device_id else None
 
             current_friendly_name = current_info.get("friendly_name", old_id)
 
@@ -547,7 +733,6 @@ async def _preview_changes_async():
                 "needs_rename": old_id != new_id or current_friendly_name != friendly_name,
                 "selected": False,  # Not selected by default
                 "device_id": device_id,
-                "has_maintained_label": "maintained" in entity_reg.get("labels", []),
                 "registry_id": registry_id,
                 "has_override": entity_override is not None,
                 "override_name": (entity_override.get("name") if entity_override else None),
@@ -561,16 +746,12 @@ async def _preview_changes_async():
                 # Device naming logic:
                 # - Device with area: suggested_name = "{area} {device_name}" (if not already prefixed)
                 # - Device without area: suggested_name = current device name (no change)
-                # - Override: use override as full device name (with area prefix if has area)
                 device_suggested_name = None
                 if device_info:
                     current_device_name = device_info["name"]
                     has_real_area = area_name != UNASSIGNED_AREA
 
-                    if device_override:
-                        # Override is the full device name (user can include area or not)
-                        device_suggested_name = device_override["name"]
-                    elif has_real_area:
+                    if has_real_area:
                         # Check if device name already starts with area name
                         area_normalized = area_name.lower()
                         device_normalized = current_device_name.lower()
@@ -591,8 +772,6 @@ async def _preview_changes_async():
                             "id": device_id,
                             "current_name": (device_info["name"] if device_info else None),
                             "suggested_name": device_suggested_name,
-                            "has_override": device_override is not None,
-                            "override_name": (device_override.get("name") if device_override else None),
                             "needs_rename": device_info and device_info["name"] != device_suggested_name,
                             "manufacturer": (device_info.get("manufacturer", "") if device_info else None),
                             "model": (device_info.get("model", "") if device_info else None),
@@ -732,6 +911,11 @@ async def _execute_changes_async():
         token = os.getenv("HA_TOKEN")
         dependency_updater = DependencyUpdater(base_url, token)
 
+        # Pre-fetch states once for all dependency updates (performance optimization)
+        logger.info("Pre-fetching states for dependency updates...")
+        cached_states = await dependency_updater.get_states()
+        logger.info(f"Cached {len(cached_states)} states")
+
         # Get states for entity generation
         client = await init_client()
         states = await client.get_states()
@@ -747,9 +931,6 @@ async def _execute_changes_async():
                 success = await device_registry.rename_device(device_id, new_device_name)
 
                 if success:
-                    # Store the full device name as override
-                    renamer_state["naming_overrides"].set_device_override(device_id, new_device_name)
-
                     results["device_success"].append(
                         {
                             "device_id": device_id,
@@ -792,10 +973,9 @@ async def _execute_changes_async():
 
                                 if should_enable:
                                     logger.info(f"Enabled and renamed disabled entity: {entity_id} -> {new_entity_id}")
-                                await entity_registry.add_labels(new_entity_id, ["maintained"])
 
                                 # Update dependencies
-                                dep_results = await dependency_updater.update_all_dependencies(entity_id, new_entity_id)
+                                dep_results = await dependency_updater.update_all_dependencies(entity_id, new_entity_id, cached_states)
 
                                 results["success"].append(
                                     {
@@ -862,8 +1042,6 @@ async def _execute_changes_async():
                         await entity_registry.rename_entity(old_id, new_id, friendly_name, enable=should_enable)
                         if should_enable:
                             logger.info(f"Enabled and renamed disabled entity: {old_id} -> {new_id}")
-                        # Label setzen
-                        await entity_registry.add_labels(new_id, ["maintained"])
                     else:
                         # Only change friendly name
                         if should_enable:
@@ -872,14 +1050,12 @@ async def _execute_changes_async():
                             logger.info(f"Enabled entity and updated friendly name: {old_id}")
                         else:
                             await entity_registry.update_entity(old_id, name=friendly_name)
-                        # Label setzen
-                        await entity_registry.add_labels(old_id, ["maintained"])
 
                     # Update dependencies only on ID change
                     if needs_id_change:
                         try:
                             logger.info(f"Updating dependencies for: {old_id} -> {new_id}")
-                            dep_results = await dependency_updater.update_all_dependencies(old_id, new_id)
+                            dep_results = await dependency_updater.update_all_dependencies(old_id, new_id, cached_states)
 
                             # Erstelle Success Entry
                             success_entry = {
@@ -934,12 +1110,11 @@ async def _execute_changes_async():
                             }
                         )
                 else:
-                    # Nur Label setzen
-                    await entity_registry.add_labels(old_id, ["maintained"])
+                    # Keine Änderung nötig
                     results["skipped"].append(
                         {
                             "entity_id": old_id,
-                            "message": "Bereits korrekt benannt, Label gesetzt",
+                            "message": "Bereits korrekt benannt",
                         }
                     )
 
@@ -951,6 +1126,102 @@ async def _execute_changes_async():
 
     # Delete preview
     del renamer_state["proposed_changes"][preview_id]
+
+    return jsonify(results)
+
+
+@app.route("/api/execute_direct", methods=["POST"])
+def execute_direct():
+    """Execute entity renames directly without preview (for hierarchy UI)"""
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    try:
+        return loop.run_until_complete(_execute_direct_async())
+    finally:
+        loop.close()
+
+
+async def _execute_direct_async():
+    """Async implementation of execute_direct"""
+    data = request.json
+    entities = data.get("entities", [])
+
+    if not entities:
+        return jsonify({"error": "Keine Entities ausgewählt"}), 400
+
+    # Execute renaming
+    base_url = os.getenv("HA_URL")
+    token = os.getenv("HA_TOKEN")
+    ws_url = base_url.replace("https://", "wss://").replace("http://", "ws://") + "/api/websocket"
+
+    results = {
+        "success": [],
+        "failed": [],
+        "skipped": [],
+        "dependency_warnings": [],
+    }
+
+    ws = HomeAssistantWebSocket(ws_url, token)
+    await ws.connect()
+
+    try:
+        entity_registry = EntityRegistry(ws)
+        dependency_updater = DependencyUpdater(base_url, token)
+
+        # Pre-fetch states once for all dependency updates (performance optimization)
+        logger.info("Pre-fetching states for dependency updates...")
+        cached_states = await dependency_updater.get_states()
+        logger.info(f"Cached {len(cached_states)} states")
+
+        for entity_data in entities:
+            old_id = entity_data.get("old_id")
+            new_id = entity_data.get("new_id")
+            friendly_name = entity_data.get("new_name")
+            registry_id = entity_data.get("registry_id")
+
+            if not old_id or not new_id:
+                results["failed"].append({"entity_id": old_id, "error": "Missing old_id or new_id"})
+                continue
+
+            # Skip if no change needed
+            if old_id == new_id:
+                results["skipped"].append({"entity_id": old_id, "reason": "Keine Änderung nötig"})
+                continue
+
+            try:
+                # Check if entity is disabled and if we should enable it
+                entity_reg = renamer_state["restructurer"].entities.get(old_id, {})
+                is_disabled = entity_reg.get("disabled_by") is not None
+                should_enable = is_disabled and os.getenv("ENABLE_DISABLED_ENTITIES", "false").lower() == "true"
+
+                # Rename entity
+                await entity_registry.rename_entity(old_id, new_id, friendly_name, enable=should_enable)
+
+                if should_enable:
+                    logger.info(f"Enabled and renamed disabled entity: {old_id} -> {new_id}")
+
+                # Update dependencies (automations, scenes, scripts)
+                dep_results = await dependency_updater.update_all_dependencies(old_id, new_id, cached_states)
+                if dep_results.get("failed"):
+                    results["dependency_warnings"].append({
+                        "entity_id": old_id,
+                        "new_id": new_id,
+                        "failed_updates": dep_results["failed"]
+                    })
+
+                results["success"].append({
+                    "old_id": old_id,
+                    "new_id": new_id,
+                    "message": f"Entity erfolgreich umbenannt: {old_id} -> {new_id}"
+                })
+                logger.info(f"Successfully renamed: {old_id} -> {new_id}")
+
+            except Exception as e:
+                logger.error(f"Error renaming entity {old_id}: {e}")
+                results["failed"].append({"entity_id": old_id, "error": str(e)})
+
+    finally:
+        await ws.disconnect()
 
     return jsonify(results)
 
@@ -1158,14 +1429,18 @@ def rename_device():
 async def _rename_device_async():
     """Async implementation of rename_device"""
     data = request.json
-    device_id = data.get("device_id")
-    new_name = data.get("new_name")
+    is_valid, error = validate_json_input(data, ["device_id", "new_name"])
+    if not is_valid:
+        return jsonify({"error": error}), 400
 
-    if not device_id or not new_name:
-        return (
-            jsonify({"error": "Device ID und neuer Name müssen angegeben werden"}),
-            400,
-        )
+    device_id = sanitize_registry_id(data.get("device_id"))
+    new_name = sanitize_name(data.get("new_name"))
+
+    if not device_id:
+        return jsonify({"error": "Invalid device ID"}), 400
+
+    if not new_name:
+        return jsonify({"error": "Invalid device name"}), 400
 
     base_url = os.getenv("HA_URL")
     token = os.getenv("HA_TOKEN")
@@ -1206,16 +1481,17 @@ def update_mapping():
 async def _update_mapping_async():
     """Async implementation of update_mapping"""
     data = request.json
-    preview_id = data.get("preview_id")
-    old_id = data.get("old_id")
-    new_id = data.get("new_id")
-    new_name = data.get("new_name")
+    is_valid, error = validate_json_input(data, ["preview_id", "old_id", "new_id"])
+    if not is_valid:
+        return jsonify({"error": error}), 400
+
+    preview_id = sanitize_string(data.get("preview_id"), max_length=64)
+    old_id = sanitize_entity_id(data.get("old_id"))
+    new_id = sanitize_entity_id(data.get("new_id"))
+    new_name = sanitize_name(data.get("new_name"))
 
     if not preview_id or not old_id or not new_id:
-        return (
-            jsonify({"error": "Preview ID, alte und neue Entity ID müssen angegeben werden"}),
-            400,
-        )
+        return jsonify({"error": "Invalid preview_id, old_id or new_id"}), 400
 
     # Hole das gespeicherte Mapping
     if preview_id not in renamer_state["proposed_changes"]:
@@ -1256,11 +1532,15 @@ def set_entity_override():
 async def _set_entity_override_async():
     """Async implementation of set_entity_override"""
     data = request.json
-    registry_id = data.get("registry_id")
-    override_name = data.get("override_name")
+    is_valid, error = validate_json_input(data, ["registry_id"])
+    if not is_valid:
+        return jsonify({"error": error}), 400
+
+    registry_id = sanitize_registry_id(data.get("registry_id"))
+    override_name = sanitize_name(data.get("override_name"))
 
     if not registry_id:
-        return jsonify({"error": "Registry ID muss angegeben werden"}), 400
+        return jsonify({"error": "Invalid registry ID"}), 400
 
     try:
         # Speichere Override
@@ -1321,107 +1601,266 @@ async def _set_entity_override_async():
         return jsonify({"error": str(e)}), 500
 
 
-@app.route("/api/set_device_override", methods=["POST"])
-def set_device_override():
-    """Setze Device Name Override"""
-    # Create new event loop for this request
+@app.route("/api/enable_entity", methods=["POST"])
+def enable_entity():
+    """Enable a disabled entity"""
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     try:
-        return loop.run_until_complete(_set_device_override_async())
+        return loop.run_until_complete(_enable_entity_async())
     finally:
         loop.close()
 
 
-async def _set_device_override_async():
-    """Async implementation of set_device_override"""
+async def _enable_entity_async():
+    """Async implementation of enable_entity"""
     data = request.json
-    device_id = data.get("device_id")
-    override_name = data.get("override_name")
+    is_valid, error = validate_json_input(data, ["entity_id"])
+    if not is_valid:
+        return jsonify({"error": error}), 400
 
-    if not device_id:
-        return jsonify({"error": "Device ID muss angegeben werden"}), 400
+    entity_id = sanitize_entity_id(data.get("entity_id"))
+
+    if not entity_id:
+        return jsonify({"error": "Invalid entity ID"}), 400
 
     try:
-        if override_name:
-            renamer_state["naming_overrides"].set_device_override(device_id, override_name)
-        else:
-            renamer_state["naming_overrides"].remove_device_override(device_id)
+        base_url = os.getenv("HA_URL")
+        token = os.getenv("HA_TOKEN")
+        ws_url = base_url.replace("https://", "wss://").replace("http://", "ws://") + "/api/websocket"
 
-        # Calculate updated entity suggestions for this device
-        updated_entities = []
+        ws = HomeAssistantWebSocket(ws_url, token)
+        await ws.connect()
 
-        # Get all entities for this device
-        client = await init_client()
-        states = await client.get_states()
+        try:
+            entity_registry = EntityRegistry(ws)
+            await entity_registry.update_entity(entity_id=entity_id, enable=True)
+            logger.info(f"Enabled entity: {entity_id}")
 
-        # Find entities that belong to this device
-        for entity_id, entity in renamer_state["restructurer"].entities.items():
-            if entity.get("device_id") == device_id:
-                # Get current state
-                entity_state = next(
-                    (s for s in states if s["entity_id"] == entity_id), {"entity_id": entity_id, "attributes": {}}
-                )
+            return jsonify({"success": True, "entity_id": entity_id})
+        finally:
+            await ws.disconnect()
 
-                # Calculate new names with updated device override
-                new_id, new_friendly_name = renamer_state["restructurer"].generate_new_entity_id(
-                    entity_id, entity_state
-                )
-
-                # Get entity registry info for additional data
-                entity_reg = renamer_state["restructurer"].entities.get(entity_id, {})
-
-                updated_entities.append(
-                    {
-                        "old_id": entity_id,
-                        "new_id": new_id,
-                        "new_name": new_friendly_name,
-                        "needs_rename": entity_id != new_id,
-                        "registry_id": entity_reg.get("id", ""),
-                        "has_override": bool(
-                            renamer_state["naming_overrides"].get_entity_override(entity_reg.get("id", ""))
-                        ),
-                    }
-                )
-
-        return jsonify(
-            {"success": True, "updated_entities": updated_entities, "device_has_override": bool(override_name)}
-        )
     except Exception as e:
-        logger.error(f"Fehler beim Setzen des Device Override: {e}")
+        error_msg = str(e)
+        logger.error(f"Error enabling entity {entity_id}: {error_msg}")
+
+        # Check if device is disabled
+        if "Device is disabled" in error_msg:
+            return jsonify({
+                "error": "device_disabled",
+                "message": "Cannot enable entity because the device is disabled. Enable the device first."
+            }), 400
+
+        return jsonify({"error": error_msg}), 500
+
+
+@app.route("/api/enable_device", methods=["POST"])
+def enable_device():
+    """Enable a disabled device"""
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    try:
+        return loop.run_until_complete(_enable_device_async())
+    finally:
+        loop.close()
+
+
+async def _enable_device_async():
+    """Async implementation of enable_device"""
+    data = request.json
+    is_valid, error = validate_json_input(data, ["device_id"])
+    if not is_valid:
+        return jsonify({"error": error}), 400
+
+    device_id = sanitize_registry_id(data.get("device_id"))
+
+    if not device_id:
+        return jsonify({"error": "Invalid device ID"}), 400
+
+    try:
+        base_url = os.getenv("HA_URL")
+        token = os.getenv("HA_TOKEN")
+        ws_url = base_url.replace("https://", "wss://").replace("http://", "ws://") + "/api/websocket"
+
+        ws = HomeAssistantWebSocket(ws_url, token)
+        await ws.connect()
+
+        try:
+            device_registry = DeviceRegistry(ws)
+            await device_registry.enable_device(device_id)
+            logger.info(f"Enabled device: {device_id}")
+
+            return jsonify({"success": True, "device_id": device_id})
+        finally:
+            await ws.disconnect()
+
+    except Exception as e:
+        logger.error(f"Error enabling device {device_id}: {e}")
         return jsonify({"error": str(e)}), 500
 
 
-@app.route("/api/set_area_override", methods=["POST"])
-def set_area_override():
-    """Setze Area Name Override"""
-    # Create new event loop for this request
+@app.route("/api/rename_entity", methods=["POST"])
+def rename_entity():
+    """Directly rename a single entity (entity_id and/or friendly_name)"""
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     try:
-        return loop.run_until_complete(_set_area_override_async())
+        return loop.run_until_complete(_rename_entity_async())
     finally:
         loop.close()
 
 
-async def _set_area_override_async():
-    """Async implementation of set_area_override"""
+async def _rename_entity_async():
+    """Async implementation of rename_entity"""
     data = request.json
-    area_id = data.get("area_id")
-    override_name = data.get("override_name")
+    is_valid, error = validate_json_input(data, ["old_entity_id"])
+    if not is_valid:
+        return jsonify({"error": error}), 400
 
-    if not area_id:
-        return jsonify({"error": "Area ID muss angegeben werden"}), 400
+    old_entity_id = sanitize_entity_id(data.get("old_entity_id"))
+    new_entity_id = sanitize_entity_id(data.get("new_entity_id")) if data.get("new_entity_id") else None
+    new_friendly_name = sanitize_name(data.get("new_friendly_name"))
+
+    if not old_entity_id:
+        return jsonify({"error": "Invalid old_entity_id"}), 400
+
+    if not new_entity_id and not new_friendly_name:
+        return jsonify({"error": "new_entity_id or new_friendly_name required"}), 400
 
     try:
-        if override_name:
-            renamer_state["naming_overrides"].set_area_override(area_id, override_name)
-        else:
-            renamer_state["naming_overrides"].remove_area_override(area_id)
+        base_url = os.getenv("HA_URL")
+        token = os.getenv("HA_TOKEN")
+        ws_url = base_url.replace("https://", "wss://").replace("http://", "ws://") + "/api/websocket"
 
-        return jsonify({"success": True})
+        ws = HomeAssistantWebSocket(ws_url, token)
+        await ws.connect()
+
+        try:
+            entity_registry = EntityRegistry(ws)
+
+            # Check if anything actually needs to change
+            id_changed = new_entity_id and old_entity_id != new_entity_id
+            name_needs_update = new_friendly_name is not None
+
+            if not id_changed and not name_needs_update:
+                return jsonify({
+                    "success": True,
+                    "skipped": True,
+                    "message": "No changes needed"
+                })
+
+            # Perform the rename
+            result = await entity_registry.rename_entity(
+                old_entity_id=old_entity_id,
+                new_entity_id=new_entity_id if id_changed else None,
+                friendly_name=new_friendly_name
+            )
+
+            if result:
+                logger.info(f"Renamed entity: {old_entity_id} -> {new_entity_id or old_entity_id} ({new_friendly_name})")
+
+                response_data = {
+                    "success": True,
+                    "old_entity_id": old_entity_id,
+                    "new_entity_id": new_entity_id or old_entity_id,
+                    "new_friendly_name": new_friendly_name
+                }
+
+                # Update dependencies (automations, scenes, scripts) if entity ID changed
+                if id_changed:
+                    try:
+                        dependency_updater = DependencyUpdater(base_url, token)
+                        dep_results = await dependency_updater.update_all_dependencies(old_entity_id, new_entity_id)
+
+                        # Always include dependency results for debugging
+                        response_data["dependencies_checked"] = True
+                        response_data["dependencies_updated"] = {
+                            "total": dep_results["total_success"],
+                            "scenes": dep_results["scenes"]["success"],
+                            "scripts": dep_results["scripts"]["success"],
+                            "automations": dep_results["automations"]["success"]
+                        }
+
+                        if dep_results["total_success"] > 0:
+                            logger.info(f"Updated {dep_results['total_success']} dependencies for {old_entity_id}")
+
+                        if dep_results["total_failed"] > 0:
+                            response_data["dependencies_failed"] = {
+                                "total": dep_results["total_failed"],
+                                "scenes": dep_results["scenes"]["failed"],
+                                "scripts": dep_results["scripts"]["failed"],
+                                "automations": dep_results["automations"]["failed"]
+                            }
+                            logger.warning(f"Failed to update {dep_results['total_failed']} dependencies for {old_entity_id}")
+                    except Exception as dep_error:
+                        logger.error(f"Error updating dependencies for {old_entity_id}: {dep_error}")
+                        response_data["dependencies_checked"] = False
+                        response_data["dependencies_error"] = str(dep_error)
+                else:
+                    response_data["dependencies_checked"] = False
+                    response_data["dependencies_reason"] = "entity_id_unchanged"
+
+                return jsonify(response_data)
+            else:
+                return jsonify({"error": "Rename failed"}), 500
+
+        finally:
+            await ws.disconnect()
+
     except Exception as e:
-        logger.error(f"Fehler beim Setzen des Area Override: {e}")
+        logger.error(f"Error renaming entity {old_entity_id}: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/delete_entity", methods=["POST"])
+def delete_entity():
+    """Delete an orphaned entity from the registry."""
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    try:
+        return loop.run_until_complete(_delete_entity_async())
+    finally:
+        loop.close()
+
+
+async def _delete_entity_async():
+    """Async implementation of delete_entity."""
+    data = request.json
+    is_valid, error = validate_json_input(data, ["entity_id"])
+    if not is_valid:
+        return jsonify({"error": error}), 400
+
+    entity_id = sanitize_entity_id(data.get("entity_id"))
+
+    if not entity_id:
+        return jsonify({"error": "Invalid entity_id"}), 400
+
+    logger.info(f"Deleting entity: {entity_id}")
+
+    try:
+        base_url = os.getenv("HA_URL")
+        token = os.getenv("HA_TOKEN")
+        ws_url = base_url.replace("https://", "wss://").replace("http://", "ws://") + "/api/websocket"
+
+        ws = HomeAssistantWebSocket(ws_url, token)
+        await ws.connect()
+
+        try:
+            entity_registry = EntityRegistry(ws)
+            result = await entity_registry.remove_entity(entity_id)
+
+            return jsonify({
+                "success": True,
+                "entity_id": entity_id,
+                "message": f"Entity {entity_id} deleted"
+            })
+
+        finally:
+            await ws.disconnect()
+
+    except Exception as e:
+        logger.error(f"Error deleting entity {entity_id}: {e}")
         return jsonify({"error": str(e)}), 500
 
 
@@ -1440,14 +1879,18 @@ def rename_device_in_ha():
 async def _rename_device_in_ha_async():
     """Async implementation of rename_device_in_ha"""
     data = request.json
-    device_id = data.get("device_id")
-    new_name = data.get("new_name")
+    is_valid, error = validate_json_input(data, ["device_id", "new_name"])
+    if not is_valid:
+        return jsonify({"error": error}), 400
 
-    if not device_id or not new_name:
-        return (
-            jsonify({"error": "Device ID und neuer Name müssen angegeben werden"}),
-            400,
-        )
+    device_id = sanitize_registry_id(data.get("device_id"))
+    new_name = sanitize_name(data.get("new_name"))
+
+    if not device_id:
+        return jsonify({"error": "Invalid device ID"}), 400
+
+    if not new_name:
+        return jsonify({"error": "Invalid device name"}), 400
 
     try:
         # Erstelle WebSocket Verbindung
@@ -1463,8 +1906,6 @@ async def _rename_device_in_ha_async():
             success = await device_registry.rename_device(device_id, new_name)
 
             if success:
-                # Speichere auch als Override
-                renamer_state["naming_overrides"].set_device_override(device_id, new_name)
                 return jsonify(
                     {
                         "success": True,
@@ -1485,14 +1926,297 @@ async def _rename_device_in_ha_async():
         return jsonify({"error": str(e)}), 500
 
 
+# === New API Endpoints for Hierarchy and Type Mappings ===
+
+
+@app.route("/api/hierarchy")
+def get_hierarchy():
+    """Get complete hierarchy data for the 3-panel UI."""
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    try:
+        return loop.run_until_complete(_get_hierarchy_async())
+    finally:
+        loop.close()
+
+
+def _strip_prefix(full_name: str, prefix: str) -> str:
+    """Strip a prefix from a name (case-insensitive)."""
+    if not full_name or not prefix:
+        return full_name or ""
+    full_lower = full_name.lower().strip()
+    prefix_lower = prefix.lower().strip()
+
+    if full_lower.startswith(prefix_lower + " "):
+        return full_name[len(prefix) + 1:].strip()
+    if full_lower == prefix_lower:
+        return ""
+    return full_name
+
+
+async def _get_hierarchy_async():
+    """Async implementation of get_hierarchy."""
+    try:
+        await load_areas_and_entities()
+        restructurer = renamer_state["restructurer"]
+
+        # Build orphan lookup from entities_by_area (where is_orphan is detected)
+        orphan_entities = set()
+        for area_data in renamer_state.get("entities_by_area", {}).values():
+            for domain_entities in area_data.get("domains", {}).values():
+                for e in domain_entities:
+                    if e.get("is_orphan"):
+                        orphan_entities.add(e["entity_id"])
+
+        # Build area lookup for prefix stripping
+        area_names = {}
+        for area_id, area_data in restructurer.areas.items():
+            area_names[area_id] = area_data.get("name", "")
+
+        # Build hierarchy response
+        areas = []
+        for area_id, area_data in restructurer.areas.items():
+            areas.append({
+                "id": area_id,
+                "name": area_data.get("name", ""),
+            })
+
+        # Build device lookup with base names (strip area prefix)
+        device_base_names = {}
+        device_area_map = {}
+        devices = []
+        for device_id, device_data in restructurer.devices.items():
+            raw_name = device_data.get("name_by_user") or device_data.get("name", "")
+            area_id = device_data.get("area_id")
+
+            # Strip area prefix from device name
+            # e.g., "Büro Homepod" with area "Büro" -> "Homepod"
+            base_name = raw_name
+            if area_id and area_id in area_names:
+                base_name = _strip_prefix(raw_name, area_names[area_id])
+
+            device_base_names[device_id] = base_name
+            device_area_map[device_id] = area_id
+
+            # Extract integration(s) from identifiers
+            # identifiers is like [["homekit_controller", "xxx"], ["zha", "yyy"]]
+            # Some have format like "homekit_controller:accessory-id" - we only want the domain part
+            integrations = []
+            for identifier in device_data.get("identifiers", []):
+                if isinstance(identifier, (list, tuple)) and len(identifier) >= 1:
+                    domain = identifier[0]
+                    # Strip anything after colon (e.g., "homekit_controller:accessory-id" -> "homekit_controller")
+                    if ":" in domain:
+                        domain = domain.split(":")[0]
+                    if domain and domain not in integrations:
+                        integrations.append(domain)
+
+            devices.append({
+                "id": device_id,
+                "name": raw_name,  # Original HA name
+                "base_name": base_name,  # Stripped base name for display
+                "area_id": area_id,
+                "manufacturer": device_data.get("manufacturer"),
+                "model": device_data.get("model"),
+                "integrations": integrations,  # e.g., ["homekit", "zha"]
+                "disabled_by": device_data.get("disabled_by"),
+            })
+
+        entities = []
+        for entity_id, entity_data in restructurer.entities.items():
+            registry_id = entity_data.get("id", "")
+            override = renamer_state["naming_overrides"].get_entity_override(registry_id)
+            device_class = entity_data.get("device_class") or entity_data.get("original_device_class")
+            device_id = entity_data.get("device_id")
+            area_id = entity_data.get("area_id")
+
+            # Get original friendly name
+            original_name = entity_data.get("name") or entity_data.get("original_name") or ""
+
+            # Strip device+area prefix from entity name
+            # e.g., "Büro Raumluftsensor Kohlendioxid" -> "Kohlendioxid"
+            base_name = original_name
+            if device_id and device_id in device_base_names:
+                # Build full device display name (area + device base)
+                dev_area_id = device_area_map.get(device_id)
+                dev_base = device_base_names[device_id]
+                if dev_area_id and dev_area_id in area_names:
+                    device_display = f"{area_names[dev_area_id]} {dev_base}"
+                else:
+                    device_display = dev_base
+                base_name = _strip_prefix(original_name, device_display)
+                # Also try just device base name
+                if base_name == original_name:
+                    base_name = _strip_prefix(original_name, dev_base)
+            elif area_id and area_id in area_names:
+                base_name = _strip_prefix(original_name, area_names[area_id])
+
+            entities.append({
+                "id": entity_id,
+                "registry_id": registry_id,
+                "device_id": device_id,
+                "area_id": area_id,
+                "device_class": device_class,
+                "original_name": original_name,  # Original HA friendly name
+                "base_name": base_name,  # Stripped base name for editing
+                "override_name": override.get("name") if override else None,
+                "has_override": override is not None,
+                "disabled_by": entity_data.get("disabled_by"),
+                "labels": entity_data.get("labels", []),
+                "platform": entity_data.get("platform"),  # Integration that provides this entity
+                "is_orphan": entity_id in orphan_entities,  # Entity restored but not provided by integration
+            })
+
+        return jsonify({
+            "areas": areas,
+            "devices": devices,
+            "entities": entities,
+            "stats": {
+                "area_count": len(areas),
+                "device_count": len(devices),
+                "entity_count": len(entities),
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"Error getting hierarchy: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/type_mappings")
+def get_type_mappings():
+    """Get all type mappings (system defaults and user overrides)."""
+    try:
+        language = request.args.get("lang", "en")
+        type_mappings = renamer_state["type_mappings"]
+
+        raw_mappings = type_mappings.get_all_known_types(language)
+
+        # Transform to frontend-expected format
+        all_mappings = []
+        for m in raw_mappings:
+            has_user = m.get("user_mapping") is not None
+            all_mappings.append({
+                "key": m["key"],
+                "system_default": m.get("system_default"),
+                "effective_value": m.get("user_mapping") or m.get("system_default") or m["key"].title(),
+                "has_user_override": has_user,
+                "source": m.get("source", "unknown"),
+            })
+
+        return jsonify({
+            "mappings": all_mappings,
+            "language": language,
+            "user_mapping_count": len(type_mappings.get_all_user_mappings()),
+        })
+
+    except Exception as e:
+        logger.error(f"Error getting type mappings: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/type_mappings/user", methods=["POST"])
+def set_user_type_mapping():
+    """Set a user type mapping."""
+    try:
+        data = request.json
+        is_valid, error = validate_json_input(data, ["type_key", "translation"])
+        if not is_valid:
+            return jsonify({"error": error}), 400
+
+        type_key = sanitize_string(data.get("type_key"), max_length=64)
+        translation = sanitize_name(data.get("translation"))
+
+        if not type_key or not translation:
+            return jsonify({"error": "Invalid type_key or translation"}), 400
+
+        type_mappings = renamer_state["type_mappings"]
+        type_mappings.set_user_mapping(type_key, translation)
+
+        return jsonify({
+            "success": True,
+            "type_key": type_key,
+            "translation": translation,
+        })
+
+    except Exception as e:
+        logger.error(f"Error setting user type mapping: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/type_mappings/user/<type_key>", methods=["DELETE"])
+def delete_user_type_mapping(type_key):
+    """Delete a user type mapping."""
+    try:
+        # Sanitize URL parameter
+        type_key = sanitize_string(type_key, max_length=64)
+        if not type_key:
+            return jsonify({"error": "Invalid type_key"}), 400
+
+        type_mappings = renamer_state["type_mappings"]
+        removed = type_mappings.remove_user_mapping(type_key)
+
+        if removed:
+            return jsonify({"success": True, "type_key": type_key})
+        else:
+            return jsonify({"error": f"No user mapping found for {type_key}"}), 404
+
+    except Exception as e:
+        logger.error(f"Error deleting user type mapping: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/learn_mapping", methods=["POST"])
+def learn_type_mapping():
+    """Learn a type mapping from entity rename."""
+    try:
+        data = request.json
+        is_valid, error = validate_json_input(data, ["type_key", "translation"])
+        if not is_valid:
+            return jsonify({"error": error}), 400
+
+        type_key = sanitize_string(data.get("type_key"), max_length=64)
+        translation = sanitize_name(data.get("translation"))
+
+        if not type_key or not translation:
+            return jsonify({"error": "Invalid type_key or translation"}), 400
+
+        # Use restructurer's learn method which handles the logic
+        restructurer = renamer_state["restructurer"]
+        restructurer.learn_type_mapping(type_key, translation)
+
+        return jsonify({
+            "success": True,
+            "type_key": type_key,
+            "translation": translation,
+            "message": f"Learned mapping: {type_key} -> {translation}",
+        })
+
+    except Exception as e:
+        logger.error(f"Error learning type mapping: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/settings")
+def settings_page():
+    """Render the settings page for type mappings management."""
+    version = str(int(time.time()))
+    response = make_response(render_template("settings.html", version=version))
+    # Prevent browser from caching the HTML page
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    return response
+
+
 if __name__ == "__main__":
     # Erstelle Template-Verzeichnis
     os.makedirs("templates", exist_ok=True)
 
     # In Add-on mode, use port 5000 for Ingress
     port = int(os.getenv("WEB_UI_PORT", 5000))
-    print("\n⚠️  ALPHA VERSION - Entity Manager Add-on")
-    print(f"\n🚀 Starting Web UI on port {port}\n")
+    print("\nALPHA VERSION - Entity Manager Add-on")
+    print(f"\nStarting Web UI on port {port}\n")
 
     # Run without debug in production
     app.run(debug=False, host="0.0.0.0", port=port)

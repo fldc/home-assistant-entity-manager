@@ -3,16 +3,27 @@
     "title": "Gestor de Entidades",
     "version_badge": "ALPHA",
     "warning_banner": "VERSIÓN ALPHA - SOLO PARA DESARROLLO",
-    "warning_description": "¡No usar en producción! Este complemento está en desarrollo temprano y puede causar problemas."
+    "warning_description": "¡No usar en producción! Este complemento está en desarrollo temprano y puede causar problemas.",
+    "settings": "Configuración"
+  },
+  "panels": {
+    "areas": "Áreas",
+    "devices": "Dispositivos",
+    "entities": "Entidades"
   },
   "filters": {
     "select_area": "Seleccionar un área...",
     "all_domains": "Todos los dominios",
-    "skip_maintained": "Mantenidos",
+    "skip_maintained": "Omitir mantenidos",
     "only_changes": "Solo cambios",
-    "show_disabled": "Desactivados",
+    "show_disabled": "Mostrar desactivados",
     "area_override_label": "Anulación de área:",
     "unassigned_area": "Sin asignar"
+  },
+  "area": {
+    "name_override_label": "Anulación de nombre de área",
+    "placeholder": "Nombre de área...",
+    "no_areas": "No se encontraron áreas"
   },
   "summary": {
     "entities": "Entidades",
@@ -55,7 +66,28 @@
     "all_related_entities_note": "Todos los IDs de entidad relacionados se ajustarán en consecuencia",
     "save_cancel_hint": "{save} para guardar, {cancel} para cancelar",
     "name_already_correct": "Nombre ya correcto",
-    "renaming": "Renombrando"
+    "renaming": "Renombrando",
+    "suffix_label": "Sufijo de entidad:",
+    "suffix_placeholder": "ej. Batería, Posición, Brillo...",
+    "apply_mapping": "Aplicar sugerencia de tipo",
+    "revert": "Restablecer",
+    "orphan_badge": "Huérfana",
+    "orphan_hint": "La entidad ya no es proporcionada por la integración",
+    "id_conflict": "Conflicto de ID",
+    "no_change": "OK",
+    "delete_orphan": "Eliminar entidad huérfana",
+    "delete_entity": "Eliminar entidad",
+    "apply_rename": "Aplicar renombrado",
+    "enable": "Activar",
+    "no_name": "(sin nombre)"
+  },
+  "virtual_devices": {
+    "automations": "Automatizaciones",
+    "scenes": "Escenas",
+    "scripts": "Scripts",
+    "schedules": "Horarios",
+    "helpers": "Ayudantes",
+    "other": "Otros"
   },
   "messages": {
     "loading": "Cargando...",
@@ -114,7 +146,15 @@
     "count_plural": "Dispositivos",
     "current_name": "Nombre actual",
     "new_name": "Nuevo nombre",
-    "open_details": "Abrir detalles del dispositivo"
+    "open_details": "Abrir detalles del dispositivo",
+    "base_name_label": "Nombre base del dispositivo (sin prefijo de área)",
+    "open_in_ha": "Abrir dispositivo en Home Assistant",
+    "entities_without_device": "Entidades sin dispositivo",
+    "unassigned": "Sin asignar",
+    "select_device": "Seleccionar un dispositivo",
+    "select_area": "Seleccionar un área",
+    "disabled_badge": "desactivado",
+    "filter_placeholder": "Filtrar dispositivos..."
   },
   "units": {
     "entities": "Entidades",
@@ -183,5 +223,77 @@
     "water_heater": "Calentador de agua",
     "weather": "Clima",
     "zone": "Zona"
+  },
+  "delete_modal": {
+    "title": "¿Eliminar entidad?",
+    "active_warning": "Esta entidad todavía está activa. La eliminación no se puede deshacer.",
+    "cancel": "Cancelar",
+    "delete": "Eliminar"
+  },
+  "action_bar": {
+    "pending_changes": "cambios pendientes",
+    "apply_all": "Aplicar todos los cambios",
+    "applying": "Aplicando..."
+  },
+  "type_mappings": {
+    "light": "Luz",
+    "switch": "Interruptor",
+    "sensor": "Sensor",
+    "binary_sensor": "Sensor",
+    "climate": "Termostato",
+    "cover": "Persiana",
+    "fan": "Ventilador",
+    "lock": "Cerradura",
+    "device_tracker": "Ubicación",
+    "media_player": "Multimedia",
+    "camera": "Cámara",
+    "vacuum": "Aspiradora",
+    "button": "Botón",
+    "number": "Ajuste",
+    "select": "Selección",
+    "update": "Actualización",
+    "remote": "Control Remoto",
+    "plant": "Planta"
+  },
+  "settings": {
+    "back_to_manager": "Volver al Gestor de Entidades",
+    "page_title": "Asignaciones de Tipos de Entidad",
+    "system_language": "Idioma del Sistema:",
+    "type_translations": "Traducciones de Tipos",
+    "add_mapping": "Agregar Asignación",
+    "total_types": "Tipos Totales:",
+    "user_overrides": "Sobrescrituras de Usuario:",
+    "search_placeholder": "Buscar por clave o traducción...",
+    "filter_all": "Todos los Tipos",
+    "filter_user": "Sobrescrituras de Usuario",
+    "filter_system": "Valores por Defecto del Sistema",
+    "th_type_key": "Clave de Tipo",
+    "th_translation": "Traducción",
+    "th_system_default": "Valor por Defecto",
+    "th_source": "Fuente",
+    "th_actions": "Acciones",
+    "source_user": "Usuario",
+    "source_system": "Sistema",
+    "edit": "Editar",
+    "remove_override": "Eliminar sobrescritura de usuario",
+    "no_results": "No se encontraron asignaciones.",
+    "no_mappings": "No hay asignaciones disponibles.",
+    "modal_add_title": "Agregar Asignación de Tipo",
+    "type_key_label": "Clave de Tipo",
+    "type_key_placeholder": "ej. battery, temperature, linkquality",
+    "translation_label": "Tu Traducción",
+    "translation_placeholder": "ej. Carga de Batería",
+    "cancel": "Cancelar",
+    "loading": "Cargando...",
+    "confirm_delete": "¿Eliminar sobrescritura de usuario para \"{key}\"? Se usará el valor por defecto del sistema.",
+    "import_export": "Importar / Exportar",
+    "import_export_hint": "Formato: tipo_clave;traducción (una por línea). Importar agrega o actualiza sin eliminar existentes.",
+    "import_export_placeholder": "battery;Nivel de Batería\ntemperature;Temperatura\nlinkquality;Intensidad de Señal",
+    "export": "Exportar",
+    "import": "Importar",
+    "exported_count": "{count} asignaciones exportadas",
+    "imported_count": "{count} asignaciones importadas",
+    "import_partial": "{imported} importadas, {errors} errores",
+    "import_empty": "No hay asignaciones válidas para importar"
   }
 }

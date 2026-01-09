@@ -38,3 +38,14 @@
 .already-correct.selected {
     background: linear-gradient(to right, #dbeafe 0%, #d1fae5 50%, #ffffff 100%);
 }
+
+.edit-input-group {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    flex: 1;
+}
+
+.edit-input-group .suffix-input {
+    flex: 1;
+}

@@ -3,16 +3,27 @@
     "title": "Entity Manager",
     "version_badge": "ALPHA",
     "warning_banner": "ALPHA VERSION - DEVELOPMENT ONLY",
-    "warning_description": "Do not use in production! This add-on is in early development and may cause issues."
+    "warning_description": "Do not use in production! This add-on is in early development and may cause issues.",
+    "settings": "Settings"
+  },
+  "panels": {
+    "areas": "Areas",
+    "devices": "Devices",
+    "entities": "Entities"
   },
   "filters": {
     "select_area": "Select an area...",
     "all_domains": "All domains",
-    "skip_maintained": "Maintained",
-    "only_changes": "Only changes",
-    "show_disabled": "Disabled",
+    "skip_maintained": "Skip Maintained",
+    "only_changes": "Only Changes",
+    "show_disabled": "Show Disabled",
     "area_override_label": "Area override:",
     "unassigned_area": "Unassigned"
+  },
+  "area": {
+    "name_override_label": "Area Name Override",
+    "placeholder": "Area name...",
+    "no_areas": "No areas found"
   },
   "summary": {
     "entities": "Entities",
@@ -55,7 +66,28 @@
     "all_related_entities_note": "All related entity IDs will be adjusted accordingly",
     "save_cancel_hint": "{save} to save, {cancel} to cancel",
     "name_already_correct": "Name already correct",
-    "renaming": "Renaming"
+    "renaming": "Renaming",
+    "suffix_label": "Entity Suffix:",
+    "suffix_placeholder": "e.g. Battery, Position, Brightness...",
+    "apply_mapping": "Apply type mapping suggestion",
+    "revert": "Reset to original",
+    "orphan_badge": "Orphan",
+    "orphan_hint": "Entity is no longer provided by integration",
+    "id_conflict": "ID conflict",
+    "no_change": "OK",
+    "delete_orphan": "Delete orphan entity",
+    "delete_entity": "Delete entity",
+    "apply_rename": "Apply rename",
+    "enable": "Enable",
+    "no_name": "(no name)"
+  },
+  "virtual_devices": {
+    "automations": "Automations",
+    "scenes": "Scenes",
+    "scripts": "Scripts",
+    "schedules": "Schedules",
+    "helpers": "Helpers",
+    "other": "Other"
   },
   "messages": {
     "loading": "Loading...",
@@ -114,7 +146,15 @@
     "count_plural": "Devices",
     "current_name": "Current name",
     "new_name": "New name",
-    "open_details": "Open device details"
+    "open_details": "Open device details",
+    "base_name_label": "Device Base Name (without Area prefix)",
+    "open_in_ha": "Open device in Home Assistant",
+    "entities_without_device": "Entities without device",
+    "unassigned": "Unassigned",
+    "select_device": "Select a device",
+    "select_area": "Select an area",
+    "disabled_badge": "disabled",
+    "filter_placeholder": "Filter devices..."
   },
   "units": {
     "entities": "Entities",
@@ -183,5 +223,77 @@
     "water_heater": "Water Heater",
     "weather": "Weather",
     "zone": "Zone"
+  },
+  "delete_modal": {
+    "title": "Delete entity?",
+    "active_warning": "This entity is still active. Deletion cannot be undone.",
+    "cancel": "Cancel",
+    "delete": "Delete"
+  },
+  "action_bar": {
+    "pending_changes": "pending changes",
+    "apply_all": "Apply All Changes",
+    "applying": "Applying..."
+  },
+  "settings": {
+    "back_to_manager": "Back to Entity Manager",
+    "page_title": "Entity Type Mappings",
+    "system_language": "System Language:",
+    "type_translations": "Type Translations",
+    "add_mapping": "Add Mapping",
+    "total_types": "Total Types:",
+    "user_overrides": "User Overrides:",
+    "search_placeholder": "Search by key or translation...",
+    "filter_all": "All Types",
+    "filter_user": "User Overrides",
+    "filter_system": "System Defaults",
+    "th_type_key": "Type Key",
+    "th_translation": "Translation",
+    "th_system_default": "System Default",
+    "th_source": "Source",
+    "th_actions": "Actions",
+    "source_user": "User",
+    "source_system": "System",
+    "edit": "Edit",
+    "remove_override": "Remove user override",
+    "no_results": "No mappings match your search.",
+    "no_mappings": "No mappings available.",
+    "modal_add_title": "Add Type Mapping",
+    "type_key_label": "Type Key",
+    "type_key_placeholder": "e.g., battery, temperature, linkquality",
+    "translation_label": "Your Translation",
+    "translation_placeholder": "e.g., Batterieladung",
+    "cancel": "Cancel",
+    "loading": "Loading...",
+    "confirm_delete": "Remove user override for \"{key}\"? The system default will be used.",
+    "import_export": "Import / Export",
+    "import_export_hint": "Format: type_key;translation (one per line). Import adds or updates mappings without deleting existing ones.",
+    "import_export_placeholder": "battery;Battery Level\ntemperature;Temperature\nlinkquality;Signal Strength",
+    "export": "Export",
+    "import": "Import",
+    "exported_count": "{count} mappings exported",
+    "imported_count": "{count} mappings imported",
+    "import_partial": "{imported} imported, {errors} errors",
+    "import_empty": "No valid mappings to import"
+  },
+  "type_mappings": {
+    "light": "Light",
+    "switch": "Switch",
+    "sensor": "Sensor",
+    "binary_sensor": "Sensor",
+    "climate": "Thermostat",
+    "cover": "Cover",
+    "fan": "Fan",
+    "lock": "Lock",
+    "device_tracker": "Location",
+    "media_player": "Media",
+    "camera": "Camera",
+    "vacuum": "Vacuum",
+    "button": "Button",
+    "number": "Setting",
+    "select": "Selection",
+    "update": "Update",
+    "remote": "Remote",
+    "plant": "Plant"
   }
 }
