@@ -2555,7 +2555,9 @@ def set_user_type_mapping():
             return jsonify({"error": error}), 400
 
         type_key = sanitize_string(data.get("type_key"), max_length=64)
-        translation = sanitize_name(data.get("translation"))
+        # Use sanitize_string instead of sanitize_name to avoid HTML escaping
+        # (apostrophes become &#x27; with sanitize_name)
+        translation = sanitize_string(data.get("translation"))
 
         if not type_key or not translation:
             return jsonify({"error": "Invalid type_key or translation"}), 400
@@ -2606,7 +2608,8 @@ def learn_type_mapping():
             return jsonify({"error": error}), 400
 
         type_key = sanitize_string(data.get("type_key"), max_length=64)
-        translation = sanitize_name(data.get("translation"))
+        # Use sanitize_string instead of sanitize_name to avoid HTML escaping
+        translation = sanitize_string(data.get("translation"))
 
         if not type_key or not translation:
             return jsonify({"error": "Invalid type_key or translation"}), 400
