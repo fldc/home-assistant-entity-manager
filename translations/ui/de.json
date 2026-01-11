@@ -23,7 +23,11 @@
   "area": {
     "name_override_label": "Bereichsname überschreiben",
     "placeholder": "Bereichsname...",
-    "no_areas": "Keine Bereiche gefunden"
+    "no_areas": "Keine Bereiche gefunden",
+    "no_area": "Kein Bereich",
+    "assign_area": "Bereich zuweisen",
+    "select_area": "Bereich wählen...",
+    "area_assigned": "Gerät wurde Bereich zugewiesen"
   },
   "summary": {
     "entities": "Entitäten",
@@ -87,7 +91,24 @@
     "scripts": "Skripte",
     "schedules": "Zeitpläne",
     "helpers": "Helfer",
-    "other": "Sonstige"
+    "other": "Sonstige",
+    "broken_refs": "Defekte Referenzen"
+  },
+  "broken_refs": {
+    "broken_refs": "defekte Referenzen",
+    "scanning": "Scanne...",
+    "no_broken": "Keine defekten Referenzen gefunden!",
+    "missing": "Fehlt",
+    "replacement": "Ersatz",
+    "click_to_select": "Klicken zum Auswählen...",
+    "suggestions": "Vorschläge:",
+    "search_other": "Andere Entität suchen...",
+    "search_placeholder": "Entity suchen...",
+    "replace_with": "Ersetzen durch:",
+    "fix": "Referenz reparieren",
+    "fixed_successfully": "Referenz erfolgreich repariert",
+    "select_replacement": "Bitte eine Ersatz-Entity auswählen",
+    "open_in_ha": "In Home Assistant öffnen"
   },
   "messages": {
     "loading": "Lädt...",
@@ -232,7 +253,9 @@
   },
   "action_bar": {
     "pending_changes": "ausstehende Änderungen",
+    "disabled_entities": "deaktiviert",
     "apply_all": "Alle Änderungen anwenden",
+    "enable_all": "Alle aktivieren",
     "applying": "Wird angewendet..."
   },
   "settings": {

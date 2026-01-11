@@ -23,13 +23,23 @@
             height: 100%;
         }
 
+        /* Main Page Layout - Flexbox */
+        .page-layout {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
         /* 3-Panel Layout Styles */
         .panel-container {
             display: grid;
             grid-template-columns: 250px 300px 1fr;
-            height: calc(100vh - 140px);
+            flex: 1;
+            min-height: 0; /* Critical: allows flex child to shrink below content size */
             gap: 1px;
             background-color: #e5e7eb;
+            overflow: hidden;
         }
 
         .panel {
@@ -52,6 +62,7 @@
             flex: 1;
             overflow-y: auto;
             padding: 8px;
+            padding-bottom: 16px;
         }
 
         .hierarchy-item {
@@ -78,6 +89,105 @@
 
         .hierarchy-item.no-changes {
             border-left: 3px solid #10b981;
+        }
+
+        /* Device Item Layout */
+        .device-item {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .device-main-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .device-icon {
+            flex-shrink: 0;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .device-info {
+            flex: 1;
+            min-width: 0;
+            overflow: hidden;
+        }
+
+        .device-name {
+            font-weight: 500;
+            font-size: 0.9rem;
+            color: #1f2937;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .device-name .disabled-badge {
+            font-size: 0.65rem;
+            font-weight: 400;
+            color: #ef4444;
+            background: #fef2f2;
+            padding: 1px 5px;
+            border-radius: 3px;
+            flex-shrink: 0;
+        }
+
+        .device-meta {
+            font-size: 0.75rem;
+            color: #6b7280;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-top: 2px;
+        }
+
+        .device-meta .integration-name {
+            color: #8b5cf6;
+        }
+
+        .device-link {
+            flex-shrink: 0;
+            color: #9ca3af;
+            transition: color 0.15s;
+        }
+
+        .device-link:hover {
+            color: #3b82f6;
+        }
+
+        .device-area-row {
+            padding-left: 30px;
+        }
+
+        .area-select {
+            width: 100%;
+            font-size: 0.8rem;
+            padding: 6px 10px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            background: white;
+            color: #374151;
+            cursor: pointer;
+            transition: border-color 0.15s;
+        }
+
+        .area-select:hover {
+            border-color: #9ca3af;
+        }
+
+        .area-select:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
         }
 
         .entity-card {
@@ -179,6 +289,476 @@
 
         .entity-card-simple.no-changes {
             border-left: 4px solid #10b981;
+        }
+
+        .entity-card-simple.broken-reference {
+            border-left: 4px solid #ef4444;
+        }
+
+        .entity-card-simple .new-state.broken .friendly-name {
+            color: #ef4444;
+        }
+
+        .entity-card-simple .new-state.broken .entity-id {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+
+        /* Broken References - Suggestion List */
+        .suggestion-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .suggestion-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 12px;
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .suggestion-item:hover {
+            border-color: #d1d5db;
+            background: #f9fafb;
+        }
+
+        .suggestion-item.selected {
+            border-color: #10b981;
+            background: #ecfdf5;
+        }
+
+        .suggestion-radio {
+            width: 18px;
+            height: 18px;
+            border: 2px solid #d1d5db;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .suggestion-item.selected .suggestion-radio {
+            border-color: #10b981;
+        }
+
+        .radio-dot {
+            width: 10px;
+            height: 10px;
+            background: #10b981;
+            border-radius: 50%;
+        }
+
+        .suggestion-content {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .suggestion-entity {
+            font-size: 0.85rem;
+            font-family: monospace;
+            color: #374151;
+            background: #f3f4f6;
+            padding: 2px 6px;
+            border-radius: 4px;
+            display: inline-block;
+            max-width: fit-content;
+        }
+
+        .suggestion-item.selected .suggestion-entity {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .suggestion-name {
+            font-size: 0.75rem;
+            color: #6b7280;
+        }
+
+        .suggestion-score {
+            font-size: 0.75rem;
+            font-weight: 500;
+            padding: 4px 8px;
+            border-radius: 4px;
+            flex-shrink: 0;
+        }
+
+        .suggestion-score.score-high {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .suggestion-score.score-medium {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .suggestion-score.score-low {
+            background: #f3f4f6;
+            color: #6b7280;
+        }
+
+        /* Scanning Overlay */
+        .scanning-overlay {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 300px;
+            padding: 40px 20px;
+        }
+
+        .scanning-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            color: #6b7280;
+        }
+
+        .scanning-spinner {
+            font-size: 2.5rem;
+            color: #3b82f6;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .scanning-content p {
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        /* Broken Reference Card */
+        .broken-reference {
+            cursor: pointer;
+        }
+
+        .broken-ref-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 4px;
+            padding: 8px 8px 0px 16px;
+        }
+
+        .broken-ref-title .config-name {
+            font-weight: 500;
+            color: #374151;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .broken-ref-title .external-link {
+            margin-left: auto;
+            color: #9ca3af;
+            transition: color 0.15s;
+            flex-shrink: 0;
+        }
+
+        .broken-ref-title .external-link:hover {
+            color: #3b82f6;
+        }
+
+        .broken-reference .current-state.broken code {
+            color: #dc2626;
+            background: #fef2f2;
+        }
+
+        .broken-reference .new-state.has-selection code {
+            color: #059669;
+            background: #ecfdf5;
+        }
+
+        .broken-reference .no-selection {
+            display: flex;
+            align-items: center;
+            min-height: 40px;
+        }
+
+        /* Grouped Broken References */
+        .broken-ref-group {
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: border-color 0.15s, box-shadow 0.15s;
+        }
+
+        .broken-ref-group:hover {
+            border-color: #d1d5db;
+        }
+
+        .broken-ref-group.has-changes {
+            border-left: 3px solid #10b981;
+        }
+
+        .broken-ref-group.no-changes {
+            border-left: 3px solid #f59e0b;
+        }
+
+        .broken-ref-group-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            flex-wrap: wrap;
+        }
+
+        .missing-entity-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .missing-entity-header i {
+            font-size: 1.1rem;
+        }
+
+        .missing-entity-id {
+            font-size: 0.9rem;
+            color: #dc2626;
+            background: #fef2f2;
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+
+        .ref-count {
+            font-size: 0.8rem;
+            color: #6b7280;
+        }
+
+        .replacement-preview {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .replacement-entity-id {
+            font-size: 0.9rem;
+            background: #ecfdf5;
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+
+        /* Affected Configs List */
+        .affected-configs {
+            border-top: 1px solid #f3f4f6;
+            padding: 8px 16px;
+            background: #f9fafb;
+        }
+
+        .affected-config-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 4px 0;
+            font-size: 0.85rem;
+        }
+
+        .affected-config-item .config-name {
+            color: #374151;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .affected-config-item .external-link {
+            color: #9ca3af;
+            font-size: 0.9rem;
+        }
+
+        .affected-config-item .external-link:hover {
+            color: #3b82f6;
+        }
+
+        .broken-ref-group .edit-panel {
+            border-top: 1px solid #e5e7eb;
+            padding: 12px 16px;
+            background: #f9fafb;
+            border-radius: 0 0 8px 8px;
+        }
+
+        /* Button styles for broken-ref-group */
+        .broken-ref-group .action-btn {
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.15s ease;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .broken-ref-group .btn-filled-green {
+            background: #10b981;
+            color: white;
+            border: 1px solid #10b981;
+        }
+        .broken-ref-group .btn-filled-green:hover {
+            background: #059669;
+            border-color: #059669;
+        }
+
+        .broken-ref-group .btn-outline-gray {
+            background: transparent;
+            color: #9ca3af;
+            border: 1px solid #d1d5db;
+        }
+
+        .expand-indicator {
+            color: #9ca3af;
+            transition: transform 0.2s ease;
+            font-size: 1.1rem;
+        }
+
+        .expand-indicator.rotate-180 {
+            transform: rotate(180deg);
+        }
+
+        .suggestion-search {
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        .search-toggle {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.8rem;
+            color: #3b82f6;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0;
+        }
+
+        .search-toggle:hover {
+            color: #2563eb;
+        }
+
+        .search-input-group {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .search-input-group .search-icon {
+            position: absolute;
+            left: 10px;
+            color: #9ca3af;
+            pointer-events: none;
+        }
+
+        .search-input.with-icon {
+            padding-left: 32px;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 0.9rem;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .search-results {
+            width: 100%;
+            margin-top: 4px;
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .search-result-item {
+            padding: 8px 12px;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .search-result-item:hover {
+            background: #f3f4f6;
+        }
+
+        .search-result-item code {
+            font-size: 0.85rem;
+            color: #374151;
+        }
+
+        .search-result-item span {
+            font-size: 0.75rem;
+            color: #6b7280;
+        }
+
+        /* Fix Preview */
+        .fix-preview {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            background: #ecfdf5;
+            border-radius: 6px;
+            margin-top: 12px;
+        }
+
+        .fix-label {
+            font-size: 0.8rem;
+            color: #6b7280;
+        }
+
+        .fix-entity {
+            font-size: 0.85rem;
+            font-family: monospace;
+            background: #d1fae5;
+            color: #065f46;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+
+        .fix-button {
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 16px;
+            background: #10b981;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.15s ease;
+        }
+
+        .fix-button:hover {
+            background: #059669;
         }
 
         .entity-card-simple.is-disabled,
@@ -715,7 +1295,8 @@
             .panel-container {
                 position: relative;
                 display: block;
-                height: calc(100vh - 170px);
+                flex: 1;
+                min-height: 0;
                 overflow: hidden;
             }
 
@@ -847,6 +1428,11 @@
             }
         }
 
+        /* Action Bar: Part of the grid, no overlap */
+        .action-bar-fixed {
+            /* No position:fixed - it's a grid row now */
+        }
+
         /* Tablet: Keep 3-panel but smaller */
         @media (min-width: 769px) and (max-width: 1024px) {
             .panel-container {
@@ -861,36 +1447,25 @@
     </style>
 </head>
 <body class="bg-gray-100">
-    <div x-data="entityManager()" x-init="init()" class="h-screen flex flex-col">
-        <!-- Alpha Warning Banner -->
-        <div class="bg-red-600 text-white px-4 py-2">
-            <div class="flex items-center justify-center space-x-2">
-                <i class="ri-alert-line text-lg"></i>
-                <span class="font-bold text-sm" x-text="t('header.warning_banner')">ALPHA VERSION</span>
-                <span class="text-xs opacity-90" x-text="t('header.warning_description')">Development only</span>
-            </div>
-        </div>
-
+    <div x-data="entityManager()" x-init="init()" class="page-layout">
         <!-- Desktop Header -->
         <header class="desktop-header bg-white shadow-sm border-b px-4 py-3">
             <div class="flex items-center justify-between">
                 <div class="flex items-center space-x-3">
                     <i class="ri-home-8-line text-2xl text-blue-600"></i>
                     <h1 class="text-xl font-bold text-gray-900" x-text="t('header.title')">Entity Manager</h1>
-                    <span class="badge badge-amber">ALPHA</span>
-                    <a href="settings" class="btn btn-ghost text-sm">
-                        <i class="ri-settings-3-line mr-1"></i>
-                        <span x-text="t('header.settings')">Settings</span>
-                    </a>
                 </div>
-                <div class="flex items-center space-x-4">
-                    <div class="text-sm text-gray-600" x-show="stats.total_entities">
+                <div class="flex items-center space-x-2">
+                    <div class="text-sm text-gray-600 mr-2" x-show="stats.total_entities">
                         <i class="ri-database-2-line"></i>
                         <span x-text="stats.total_entities"></span> <span x-text="t('units.entities')">Entities</span>
                     </div>
                     <button @click="loadHierarchy()" class="btn btn-ghost" :title="t('buttons.reload')">
                         <i class="ri-refresh-line"></i>
                     </button>
+                    <a href="settings" class="btn btn-ghost" :title="t('header.settings')">
+                        <i class="ri-settings-3-line"></i>
+                    </a>
                 </div>
             </div>
         </header>
@@ -936,7 +1511,7 @@
         </div>
 
         <!-- 3-Panel Layout -->
-        <div class="panel-container flex-1">
+        <div class="panel-container">
             <!-- Panel 1: Areas -->
             <div class="panel"
                  :class="{'mobile-active': mobileView === 'areas'}">
@@ -965,12 +1540,12 @@
                         <div>
                             <template x-for="area in sortedAreas" :key="area.id">
                                 <div class="hierarchy-item"
-                                     :class="{ 'selected': selectedArea === area.id }"
+                                     :class="{ 'selected': selectedArea === area.id, 'special-area': area.isSpecial }"
                                      @click="selectArea(area)">
                                     <div class="flex items-center justify-between">
                                         <div class="flex-1 min-w-0">
                                             <div class="flex items-center gap-2">
-                                                <i class="ri-map-pin-line text-blue-500"></i>
+                                                <i :class="area.isSpecial ? 'ri-question-line text-orange-500' : 'ri-map-pin-line text-blue-500'"></i>
                                                 <span class="font-medium truncate" x-text="area.name"></span>
                                             </div>
                                             <div class="text-xs text-gray-500 mt-0.5" x-show="area.has_override">
@@ -978,8 +1553,10 @@
                                             </div>
                                         </div>
                                         <div class="flex items-center gap-2">
-                                            <span class="text-xs text-gray-500" x-text="getAreaEntityCount(area.id)"></span>
-                                            <a :href="'/config/areas/area/' + area.id"
+                                            <span class="text-xs text-gray-500"
+                                                  x-text="area.isSpecial ? area.deviceCount + ' Devices' : getAreaEntityCount(area.id)"></span>
+                                            <a x-show="!area.isSpecial"
+                                               :href="'/config/areas/area/' + area.id"
                                                target="_blank"
                                                @click.stop
                                                class="text-gray-400 hover:text-blue-500 transition-colors"
@@ -1043,41 +1620,57 @@
                     <template x-if="selectedArea">
                         <div>
                             <template x-for="device in filteredDevices" :key="device.id">
-                                <div class="hierarchy-item"
+                                <div class="hierarchy-item device-item"
                                      :class="{
                                          'selected': selectedDevice === device.id,
                                          'has-changes': deviceNeedsRename(device),
-                                         'is-disabled': device.disabled_by
+                                         'is-disabled': device.disabled_by,
+                                         'no-area-mode': selectedArea === '__no_area__'
                                      }"
                                      @click="selectDevice(device)">
-                                    <div class="flex items-center justify-between">
-                                        <div class="flex-1 min-w-0">
-                                            <div class="flex items-center gap-2">
-                                                <!-- Integration icon from HA brands -->
-                                                <template x-if="device.integrations && device.integrations.length > 0">
-                                                    <img :src="'https://brands.home-assistant.io/' + device.integrations[0] + '/icon.png'"
-                                                         class="w-5 h-5 rounded"
-                                                         :alt="device.integrations[0]"
-                                                         @error="$el.style.display='none'; $el.nextElementSibling.style.display='inline'">
-                                                </template>
-                                                <i class="ri-device-line text-green-500"
-                                                   :style="device.integrations && device.integrations.length > 0 ? 'display:none' : ''"></i>
-                                                <span class="font-medium truncate" x-text="device.base_name"></span>
-                                                <span x-show="device.disabled_by" class="text-xs text-red-500">(<span x-text="t('device.disabled_badge')">disabled</span>)</span>
+                                    <!-- Main row -->
+                                    <div class="device-main-row">
+                                        <!-- Icon -->
+                                        <div class="device-icon">
+                                            <template x-if="device.integrations && device.integrations.length > 0">
+                                                <img :src="'https://brands.home-assistant.io/' + device.integrations[0] + '/icon.png'"
+                                                     class="w-5 h-5 rounded"
+                                                     :alt="device.integrations[0]"
+                                                     @error="$el.style.display='none'; $el.nextElementSibling.style.display='inline'">
+                                            </template>
+                                            <i class="ri-device-line text-green-500"
+                                               :style="device.integrations && device.integrations.length > 0 ? 'display:none' : ''"></i>
+                                        </div>
+                                        <!-- Name and info -->
+                                        <div class="device-info">
+                                            <div class="device-name">
+                                                <span x-text="device.base_name"></span>
+                                                <span x-show="device.disabled_by" class="disabled-badge" x-text="t('device.disabled_badge')">disabled</span>
                                             </div>
-                                            <div class="text-xs text-gray-500 mt-0.5" x-show="device.manufacturer || device.integrations?.length">
-                                                <span x-text="device.manufacturer"></span>
-                                                <span x-show="device.model" x-text="' · ' + device.model"></span>
-                                                <span x-show="device.integrations?.length" class="text-purple-500" x-text="device.integrations?.join(', ')"></span>
+                                            <div class="device-meta" x-show="device.manufacturer || device.integrations?.length">
+                                                <span x-show="device.manufacturer" x-text="device.manufacturer"></span>
+                                                <span x-show="device.manufacturer && device.integrations?.length"> · </span>
+                                                <span x-show="device.integrations?.length" class="integration-name" x-text="device.integrations?.[0]"></span>
                                             </div>
                                         </div>
+                                        <!-- External link -->
                                         <a :href="'/config/devices/device/' + device.id"
                                            target="_blank"
                                            @click.stop
-                                           class="text-gray-400 hover:text-blue-500 transition-colors"
+                                           class="device-link"
                                            :title="t('device.open_in_ha')">
                                             <i class="ri-external-link-line"></i>
                                         </a>
+                                    </div>
+                                    <!-- Area Assignment row (only for devices without area) -->
+                                    <div x-show="selectedArea === '__no_area__'" class="device-area-row" @click.stop>
+                                        <select @change="assignDeviceArea(device.id, $event.target.value)"
+                                                class="area-select">
+                                            <option value="" x-text="t('area.select_area')">Select area...</option>
+                                            <template x-for="area in hierarchy.areas" :key="area.id">
+                                                <option :value="area.id" x-text="area.name"></option>
+                                            </template>
+                                        </select>
                                     </div>
                                 </div>
                             </template>
@@ -1122,7 +1715,9 @@
                     </div>
                 </div>
                 <!-- Device Name Edit - Below header for better mobile layout -->
-                <div x-show="selectedDeviceData && !isVirtualDevice(selectedDevice)" class="px-4 py-2 bg-gray-50 border-b">
+                <div x-show="selectedDeviceData && !isVirtualDevice(selectedDevice)"
+                     class="px-4 py-2 bg-gray-50 border-b"
+                     :class="{'border-l-4 border-l-amber-500 bg-amber-50': deviceNameNeedsRename(selectedDeviceData)}">
                     <!-- Device rename preview -->
                     <div x-show="deviceNameNeedsRename(selectedDeviceData)" class="mb-2 text-sm">
                         <span class="text-gray-400" x-text="selectedDeviceData?.name"></span>
@@ -1134,12 +1729,16 @@
                         <input type="text"
                                class="edit-input flex-1"
                                x-ref="deviceNameInput"
-                               :value="selectedDeviceData?.base_name"
+                               :value="devicePreviewBaseName !== null ? devicePreviewBaseName : selectedDeviceData?.base_name"
+                               @input="devicePreviewBaseName = $event.target.value"
                                @keyup.enter="renameDeviceInHA($event.target.value)"
-                               :placeholder="selectedDeviceData?.base_name">
+                               :placeholder="selectedDeviceData?.base_name"
+                               :disabled="renamingDevice || applyingEntityId || executing">
                         <button @click="renameDeviceInHA($refs.deviceNameInput.value)"
                                 class="btn btn-sm"
-                                style="background: #10b981; color: white;">
+                                style="background: #10b981; color: white;"
+                                :disabled="renamingDevice || applyingEntityId || executing"
+                                :class="{'opacity-50 cursor-not-allowed': renamingDevice || applyingEntityId || executing}">
                             <i class="ri-check-line"></i>
                         </button>
                     </div>
@@ -1157,22 +1756,174 @@
                         <i class="ri-eye-off-line mr-1"></i> <span x-text="t('filters.show_disabled')">Show Disabled</span>
                     </button>
                 </div>
-                <div class="panel-content">
+                <div class="panel-content" >
                     <template x-if="!selectedDevice">
                         <div class="text-center py-8 text-gray-500">
                             <i class="ri-arrow-left-line text-3xl mb-2 block"></i>
                             <span x-text="t('device.select_device')">Select a device</span>
                         </div>
                     </template>
-                    <template x-if="selectedDevice">
+                    <!-- Broken References Panel -->
+                    <template x-if="selectedDevice === '__broken_refs__'">
+                        <div class="broken-refs-panel" style="position: relative; min-height: 200px;">
+                            <!-- Loading Overlay -->
+                            <div x-show="brokenRefsLoading"
+                                 x-transition:enter="transition ease-out duration-200"
+                                 x-transition:enter-start="opacity-0"
+                                 x-transition:enter-end="opacity-100"
+                                 x-transition:leave="transition ease-in duration-150"
+                                 x-transition:leave-start="opacity-100"
+                                 x-transition:leave-end="opacity-0"
+                                 class="scanning-overlay">
+                                <div class="scanning-content">
+                                    <i class="ri-loader-4-line scanning-spinner"></i>
+                                    <p x-text="t('broken_refs.scanning')">Scanning...</p>
+                                </div>
+                            </div>
+
+                            <!-- Header with Refresh -->
+                            <div class="flex justify-between items-center mb-4 px-2">
+                                <span class="text-sm text-gray-500"
+                                      x-text="filteredBrokenReferences.length + ' ' + t('broken_refs.broken_refs')"></span>
+                                <button @click="loadBrokenReferences(true)"
+                                        :disabled="brokenRefsLoading"
+                                        class="btn btn-sm btn-ghost">
+                                    <i class="ri-refresh-line" :class="{'animate-spin': brokenRefsLoading}"></i>
+                                </button>
+                            </div>
+
+                            <!-- Results Container - Hidden during loading -->
+                            <div x-show="!brokenRefsLoading">
+                                <!-- Empty State -->
+                                <div x-show="filteredBrokenReferences.length === 0"
+                                     class="text-center py-8 text-green-600">
+                                    <i class="ri-checkbox-circle-line text-4xl"></i>
+                                    <p class="mt-2" x-text="t('broken_refs.no_broken')">No broken references found!</p>
+                                </div>
+
+                                <!-- Grouped Reference Cards -->
+                                <template x-for="group in groupedBrokenReferences" :key="group.missing_entity_id">
+                                <div class="broken-ref-group"
+                                     :class="{'has-changes': selectedReplacement[group.missing_entity_id], 'no-changes': !selectedReplacement[group.missing_entity_id]}"
+                                     :data-expanded="expandedBrokenRef === group.missing_entity_id"
+                                     @click="expandedBrokenRef = expandedBrokenRef === group.missing_entity_id ? null : group.missing_entity_id">
+
+                                    <!-- Group Header: Missing Entity -->
+                                    <div class="broken-ref-group-header">
+                                        <!-- Missing Entity ID -->
+                                        <div class="missing-entity-header">
+                                            <i class="ri-error-warning-line text-red-500"></i>
+                                            <code class="missing-entity-id" x-text="group.missing_entity_id"></code>
+                                            <span class="ref-count" x-text="'(' + group.refs.length + ')'"></span>
+                                        </div>
+
+                                        <!-- Arrow and Replacement -->
+                                        <div class="replacement-preview">
+                                            <i class="ri-arrow-right-line text-gray-400"></i>
+                                            <template x-if="selectedReplacement[group.missing_entity_id]">
+                                                <code class="replacement-entity-id text-green-600" x-text="selectedReplacement[group.missing_entity_id]"></code>
+                                            </template>
+                                            <template x-if="!selectedReplacement[group.missing_entity_id]">
+                                                <span class="text-gray-400 text-sm" x-text="t('broken_refs.click_to_select')">Click to select...</span>
+                                            </template>
+                                        </div>
+
+                                        <!-- Actions -->
+                                        <div class="flex items-center gap-2 ml-auto" @click.stop>
+                                            <!-- Fix All button -->
+                                            <button @click="fixReference(group.refs[0])"
+                                                    class="action-btn"
+                                                    :class="selectedReplacement[group.missing_entity_id] ? 'btn-filled-green' : 'btn-outline-gray opacity-50'"
+                                                    :disabled="!selectedReplacement[group.missing_entity_id]"
+                                                    :title="t('broken_refs.fix')">
+                                                <i class="ri-check-line"></i>
+                                                <span x-show="group.refs.length > 1" class="ml-1" x-text="'(' + group.refs.length + ')'"></span>
+                                            </button>
+                                            <!-- Expand indicator -->
+                                            <div class="expand-indicator"
+                                                 :class="{'rotate-180': expandedBrokenRef === group.missing_entity_id}">
+                                                <i class="ri-arrow-down-s-line"></i>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Affected Configs List -->
+                                    <div class="affected-configs">
+                                        <template x-for="ref in group.refs" :key="ref.config_id">
+                                            <div class="affected-config-item">
+                                                <i :class="getConfigIcon(ref.config_type)" class="text-gray-400"></i>
+                                                <span class="config-name" x-text="ref.config_name"></span>
+                                                <a :href="getHAConfigUrl(ref)" target="_blank"
+                                                   @click.stop
+                                                   class="external-link ml-auto"
+                                                   :title="t('broken_refs.open_in_ha')">
+                                                    <i class="ri-external-link-line"></i>
+                                                </a>
+                                            </div>
+                                        </template>
+                                    </div>
+
+                                    <!-- Expanded Panel - Suggestions -->
+                                    <div class="edit-panel" x-show="expandedBrokenRef === group.missing_entity_id" x-transition @click.stop>
+                                        <label class="text-xs text-gray-500 block mb-2" x-text="t('broken_refs.suggestions')">Suggestions</label>
+                                        <div class="suggestion-list">
+                                            <template x-for="sug in getSuggestionsFor(group.missing_entity_id)" :key="sug.entity_id">
+                                                <div class="suggestion-item"
+                                                     :class="{'selected': selectedReplacement[group.missing_entity_id] === sug.entity_id}"
+                                                     @click="selectedReplacement = {...selectedReplacement, [group.missing_entity_id]: sug.entity_id}">
+                                                    <div class="suggestion-radio">
+                                                        <div class="radio-dot" x-show="selectedReplacement[group.missing_entity_id] === sug.entity_id"></div>
+                                                    </div>
+                                                    <div class="suggestion-content">
+                                                        <code class="suggestion-entity" x-text="sug.entity_id"></code>
+                                                        <span class="suggestion-name" x-text="sug.friendly_name"></span>
+                                                    </div>
+                                                    <div class="suggestion-score"
+                                                         :class="sug.score >= 0.7 ? 'score-high' : sug.score >= 0.4 ? 'score-medium' : 'score-low'"
+                                                         x-text="Math.round(sug.score * 100) + '%'"></div>
+                                                </div>
+                                            </template>
+
+                                            <!-- Custom Search -->
+                                            <div class="suggestion-search">
+                                                <div class="search-input-group">
+                                                    <i class="ri-search-line search-icon"></i>
+                                                    <input type="text"
+                                                           :placeholder="t('broken_refs.search_placeholder')"
+                                                           x-model="searchQuery[group.missing_entity_id]"
+                                                           @input="loadAllEntitiesForSearch()"
+                                                           @focus="showAutocomplete = {...showAutocomplete, [group.missing_entity_id]: true}"
+                                                           class="search-input with-icon">
+                                                </div>
+                                                <div class="search-results" x-show="searchQuery[group.missing_entity_id]">
+                                                    <template x-for="e in getFilteredEntitiesForSearch(group.missing_entity_id)" :key="e.entity_id">
+                                                        <div @click="selectEntityFromSearch(group.missing_entity_id, e.entity_id)"
+                                                             class="search-result-item">
+                                                            <code x-text="e.entity_id"></code>
+                                                            <span x-text="e.friendly_name"></span>
+                                                        </div>
+                                                    </template>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+                            </div><!-- End Results Container -->
+                        </div>
+                    </template>
+
+                    <!-- Normal Entity List -->
+                    <template x-if="selectedDevice && selectedDevice !== '__broken_refs__'">
                         <div>
                             <!-- Simple Entity List -->
                             <template x-for="entity in filteredEntities" :key="entity.registry_id">
                                 <div class="entity-card-simple"
                                      :class="{
-                                         'has-changes': entityNeedsRename(entity),
-                                         'no-changes': !entityNeedsRename(entity),
-                                         'is-disabled': entity.disabled_by
+                                         'has-changes': selectedArea !== '__no_area__' && entityNeedsRename(entity),
+                                         'no-changes': selectedArea === '__no_area__' || !entityNeedsRename(entity),
+                                         'is-disabled': entity.disabled_by,
+                                         'no-area-mode': selectedArea === '__no_area__'
                                      }">
 
                                     <!-- Disabled indicator -->
@@ -1184,8 +1935,8 @@
                                         </button>
                                     </div>
 
-                                    <!-- Main: Current → New -->
-                                    <div class="entity-names" @click="toggleEntityExpand(entity)">
+                                    <!-- Main: Current → New (or just Current in no-area mode) -->
+                                    <div class="entity-names" @click="selectedArea !== '__no_area__' && toggleEntityExpand(entity)">
                                         <div class="current-state">
                                             <div class="friendly-name">
                                                 <span x-text="entity.original_name || t('entity.no_name')"></span>
@@ -1198,63 +1949,65 @@
                                             <code class="entity-id" x-text="entity.id"></code>
                                         </div>
 
-                                        <template x-if="entityNeedsRename(entity)">
+                                        <!-- Arrow and new state - hide in no-area mode -->
+                                        <template x-if="selectedArea !== '__no_area__' && entityNeedsRename(entity)">
                                             <div class="arrow-separator">
                                                 <i class="ri-arrow-right-line"></i>
                                             </div>
                                         </template>
 
-                                        <template x-if="entityNeedsRename(entity)">
+                                        <template x-if="selectedArea !== '__no_area__' && entityNeedsRename(entity)">
                                             <div class="new-state">
                                                 <div class="friendly-name" x-text="entity._previewName || getEntityFriendlyName(entity)"></div>
                                                 <code class="entity-id" x-text="entity._previewId || getNewEntityId(entity)"></code>
                                             </div>
                                         </template>
 
-                                        <template x-if="!entityNeedsRename(entity)">
+                                        <!-- OK badge - hide in no-area mode -->
+                                        <template x-if="selectedArea !== '__no_area__' && !entityNeedsRename(entity)">
                                             <div class="no-change-badge">
                                                 <i class="ri-check-line"></i> <span x-text="t('entity.no_change')">OK</span>
                                             </div>
                                         </template>
 
                                         <div class="flex items-center gap-2 ml-auto">
-                                            <!-- Conflict warning -->
-                                            <span x-show="entityNeedsRename(entity) && isEntityIdTaken(entity)"
+                                            <!-- Conflict warning - hide in no-area mode -->
+                                            <span x-show="selectedArea !== '__no_area__' && entityNeedsRename(entity) && isEntityIdTaken(entity)"
                                                   class="text-xs text-red-500 flex items-center gap-1"
                                                   :title="'Target ID: ' + getNewEntityId(entity)">
                                                 <i class="ri-error-warning-line"></i> <span x-text="t('entity.id_conflict')">ID conflict</span>
                                             </span>
                                             <div class="btn-group">
-                                                <!-- Quick apply button - filled green for non-orphan, outline for orphan -->
-                                                <template x-if="entityNeedsRename(entity)">
+                                                <!-- Quick apply button - hide in no-area mode -->
+                                                <template x-if="selectedArea !== '__no_area__' && entityNeedsRename(entity)">
                                                     <button @click.stop="quickApplyEntity(entity)"
                                                             class="action-btn"
                                                             :class="{
-                                                                'opacity-50 cursor-not-allowed': isEntityIdTaken(entity),
+                                                                'opacity-50 cursor-not-allowed': isEntityIdTaken(entity) || applyingEntityId || renamingDevice || executing,
                                                                 'btn-filled-green': !isOrphanEntity(entity),
                                                                 'btn-outline-gray hover:btn-filled-green': isOrphanEntity(entity)
                                                             }"
-                                                            :disabled="isEntityIdTaken(entity)"
+                                                            :disabled="isEntityIdTaken(entity) || applyingEntityId || renamingDevice || executing"
                                                             :title="isEntityIdTaken(entity) ? t('entity.id_conflict') : t('entity.apply_rename')">
                                                         <i class="ri-check-line"></i>
                                                     </button>
                                                 </template>
-                                                <!-- Delete button - filled red for orphan, outline for non-orphan -->
+                                                <!-- Delete button - always visible, filled red in no-area mode -->
                                                 <button @click.stop="confirmDeleteEntity(entity)"
                                                         class="action-btn"
                                                         :class="{
-                                                            'btn-filled-red': isOrphanEntity(entity),
-                                                            'btn-outline-gray hover:btn-filled-red': !isOrphanEntity(entity)
+                                                            'btn-filled-red': selectedArea === '__no_area__' || isOrphanEntity(entity),
+                                                            'btn-outline-gray hover:btn-filled-red': selectedArea !== '__no_area__' && !isOrphanEntity(entity)
                                                         }"
-                                                        :title="isOrphanEntity(entity) ? t('entity.delete_orphan') : t('entity.delete_entity')">
+                                                        :title="selectedArea === '__no_area__' ? t('entity.delete_entity') : (isOrphanEntity(entity) ? t('entity.delete_orphan') : t('entity.delete_entity'))">
                                                     <i class="ri-delete-bin-line"></i>
                                                 </button>
                                             </div>
                                         </div>
                                     </div>
 
-                                    <!-- Edit Panel (click to show) -->
-                                    <div class="edit-panel" x-show="entity._expanded" @click.stop>
+                                    <!-- Edit Panel - hide in no-area mode -->
+                                    <div class="edit-panel" x-show="selectedArea !== '__no_area__' && entity._expanded" @click.stop>
                                         <div class="edit-row">
                                             <label x-text="t('entity.suffix_label')">Entity Suffix:</label>
                                             <div class="edit-input-group">
@@ -1266,9 +2019,9 @@
                                                        @blur="$event.target.value = $event.target.value.trim(); updateEntityPreview(entity, $event.target.value)"
                                                        @keyup.enter="saveEntitySuffix(entity)"
                                                        :placeholder="t('entity.suffix_placeholder')">
-                                                <button @click="applyTypeMappingSuffix(entity)"
+                                                <button @click="applySuggestion(entity)"
                                                         class="btn btn-ghost btn-sm"
-                                                        :title="t('entity.apply_mapping') + ': ' + getTypeMappingSuggestion(entity)">
+                                                        :title="t('entity.accept_suggestion') + ': ' + getTypeMappingSuggestion(entity)">
                                                     <i class="ri-magic-line"></i>
                                                 </button>
                                                 <button @click="revertEntitySuffix(entity)"
@@ -1295,31 +2048,48 @@
             </div>
         </div>
 
-        <!-- Action Bar - Simplified -->
-        <div class="bg-white border-t shadow-lg px-4 py-3" x-show="pendingChangesCount > 0">
-            <div class="flex items-center justify-between">
+               <!-- Action Bar - Fixed at viewport bottom -->
+              <div class="action-bar-fixed bg-white border-t shadow-lg px-4 py-3"
+                    x-show="pendingChangesCount > 0 || disabledEntitiesCount > 0"
+                    x-cloak>
                 <div class="flex items-center gap-4">
-                    <span class="text-sm text-gray-600">
-                        <span class="font-bold text-amber-600" x-text="pendingChangesCount"></span> <span x-text="t('action_bar.pending_changes')">pending changes</span>
+                    <span class="text-sm text-gray-600" x-show="pendingChangesCount > 0">
+                        <span class="font-bold text-amber-600" x-text="pendingChangesCount"></span>
+                        <span x-text="t('action_bar.pending_changes')">pending changes</span>
+                    </span>
+                    <span class="text-sm text-gray-600" x-show="disabledEntitiesCount > 0">
+                        <span class="font-bold text-gray-500" x-text="disabledEntitiesCount"></span>
+                        <span x-text="t('action_bar.disabled_entities')">disabled</span>
                     </span>
                 </div>
                 <div class="flex items-center gap-3">
-                    <button @click="executeAllChanges()"
+                    <button @click="enableAllDisabled()"
+                            x-show="disabledEntitiesCount > 0"
                             :disabled="executing"
-                            class="btn btn-success"
+                            class="btn btn-outline"
                             :class="{'opacity-50 cursor-not-allowed': executing}">
+                        <i class="ri-eye-line mr-2"></i>
+                        <span x-text="t('action_bar.enable_all')">Enable All</span>
+                    </button>
+                    <button @click="executeAllChanges()"
+                            x-show="pendingChangesCount > 0"
+                            :disabled="executing || applyingEntityId || renamingDevice"
+                            class="btn btn-success"
+                            :class="{'opacity-50 cursor-not-allowed': executing || applyingEntityId || renamingDevice}">
                         <i class="ri-check-double-line mr-2" x-show="!executing"></i>
                         <i class="ri-loader-4-line animate-spin mr-2" x-show="executing"></i>
-                        <span x-text="executing ? t('action_bar.applying') : t('action_bar.apply_all')">Apply All Changes</span>
+                        <span x-show="!executing" x-text="t('action_bar.apply_all')">Apply All Changes</span>
+                        <span x-show="executing" x-text="executingTotal > 0 ? `${executingProgress}/${executingTotal}` : t('action_bar.applying')"></span>
                     </button>
                 </div>
             </div>
         </div>
 
         <!-- Toast Messages -->
-        <div x-show="message"
+        <div x-cloak
+             x-show="message"
              x-transition
-             class="fixed bottom-20 right-4 max-w-md p-4 rounded-lg shadow-lg"
+             class="fixed bottom-20 right-4 max-w-md p-4 rounded-lg shadow-lg z-50"
              :class="messageType === 'success' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'">
             <div class="flex items-center gap-2">
                 <i :class="messageType === 'success' ? 'ri-check-circle-line' : 'ri-error-warning-line'" class="text-xl"></i>
@@ -1379,6 +2149,8 @@
                 // State
                 loading: false,
                 executing: false,
+                executingProgress: 0,
+                executingTotal: 0,
                 message: '',
                 messageType: 'success',
 
@@ -1396,6 +2168,10 @@
                 selectedAreaData: null,
                 selectedDeviceData: null,
                 selectedEntityData: null,
+                devicePreviewBaseName: null,  // Temporary preview while editing device name
+                renamingDevice: false,  // Loading state for device rename
+                applyingEntityId: null,  // ID of entity currently being renamed
+                previewVersion: 0,  // Incremented to force Alpine reactivity on preview changes
 
                 // Filters
                 onlyChanges: false,
@@ -1438,33 +2214,62 @@
                     if (!this.hierarchy.areas) return [];
                     let areas = [...this.hierarchy.areas];
 
-                    // Only show areas with entities that need renaming
+                    // Only show areas that have at least one device that would appear in filteredDevices
                     if (this.onlyChanges) {
                         areas = areas.filter(area => {
-                            // Get all entities for this area (via devices or direct assignment)
-                            const areaDevices = this.hierarchy.devices.filter(d => d.area_id === area.id);
-                            let areaEntities = this.hierarchy.entities.filter(e =>
-                                areaDevices.some(d => d.id === e.device_id) || e.area_id === area.id
-                            );
-                            // Apply same filters as entity list
+                            // Get all devices for this area (respecting showDisabled filter)
+                            let areaDevices = this.hierarchy.devices.filter(d => d.area_id === area.id);
                             if (!this.showDisabled) {
-                                areaEntities = areaEntities.filter(e => !e.disabled_by);
+                                areaDevices = areaDevices.filter(d => !d.disabled_by);
                             }
-                            return areaEntities.some(e => this.entityNeedsRename(e));
+
+                            // Use same logic as filteredDevices: device needs rename OR has entities that need rename
+                            return areaDevices.some(device => {
+                                // Check if device name itself needs renaming
+                                if (this.deviceNameNeedsRename(device)) {
+                                    return true;
+                                }
+                                // Check if any entities need renaming
+                                let deviceEntities = this.hierarchy.entities.filter(e => e.device_id === device.id);
+                                if (!this.showDisabled) {
+                                    deviceEntities = deviceEntities.filter(e => !e.disabled_by);
+                                }
+                                return deviceEntities.some(e => this.entityNeedsRename(e));
+                            });
                         });
                     }
 
-                    return areas.sort((a, b) => {
+                    const sortedAreas = areas.sort((a, b) => {
                         const nameA = (a.name || '').toLowerCase();
                         const nameB = (b.name || '').toLowerCase();
                         return nameA.localeCompare(nameB);
                     });
+
+                    // Add "No Area" entry if there are devices without area
+                    const devicesWithoutArea = this.hierarchy.devices.filter(d => !d.area_id);
+                    if (devicesWithoutArea.length > 0 && !this.onlyChanges) {
+                        sortedAreas.push({
+                            id: '__no_area__',
+                            name: this.t('area.no_area'),
+                            isSpecial: true,
+                            deviceCount: devicesWithoutArea.length
+                        });
+                    }
+
+                    return sortedAreas;
                 },
 
                 // Computed: Filtered devices for selected area (sorted alphabetically)
                 get filteredDevices() {
                     if (!this.selectedArea) return [];
-                    let devices = this.hierarchy.devices.filter(d => d.area_id === this.selectedArea);
+
+                    // Special handling for "No Area"
+                    let devices;
+                    if (this.selectedArea === '__no_area__') {
+                        devices = this.hierarchy.devices.filter(d => !d.area_id);
+                    } else {
+                        devices = this.hierarchy.devices.filter(d => d.area_id === this.selectedArea);
+                    }
 
                     // Filter out disabled devices unless showDisabled is true
                     if (!this.showDisabled) {
@@ -1486,9 +2291,14 @@
                         });
                     }
 
-                    // Only show devices with entities that need renaming
+                    // Only show devices that need renaming (device name or entities)
                     if (this.onlyChanges) {
                         devices = devices.filter(d => {
+                            // Check if device name itself needs renaming
+                            if (this.deviceNameNeedsRename(d)) {
+                                return true;
+                            }
+                            // Check if any entities need renaming
                             let deviceEntities = this.hierarchy.entities.filter(e => e.device_id === d.id);
                             // Apply same filters as entity list
                             if (!this.showDisabled) {
@@ -1542,8 +2352,26 @@
                         icon: 'ri-question-line',
                         labelKey: 'virtual_devices.other',
                         fallback: 'Other'
+                    },
+                    '__broken_refs__': {
+                        domains: null,
+                        icon: 'ri-error-warning-line',
+                        labelKey: 'virtual_devices.broken_refs',
+                        fallback: 'Broken References',
+                        isSpecial: true  // Not based on entities without device
                     }
                 },
+
+                // Broken references state
+                brokenReferences: [],
+                brokenRefSuggestions: {},
+                brokenRefsLoading: false,
+                brokenRefsCached: false,
+                selectedReplacement: {},
+                showAutocomplete: {},
+                expandedBrokenRef: null,
+                searchQuery: {},
+                allEntitiesForSearch: [],
 
                 // Computed: Entities without device in selected area
                 get entitiesWithoutDevice() {
@@ -1564,6 +2392,22 @@
 
                     const result = [];
                     for (const [id, group] of Object.entries(this.virtualDeviceGroups)) {
+                        // Special handling for broken refs
+                        if (group.isSpecial) {
+                            // Only show if there are broken references (filtered by area)
+                            const filteredCount = this.filteredBrokenReferences.length;
+                            if (filteredCount > 0) {
+                                result.push({
+                                    id: id,
+                                    icon: group.icon,
+                                    label: this.t(group.labelKey) || group.fallback,
+                                    count: filteredCount,
+                                    isSpecial: true
+                                });
+                            }
+                            continue;
+                        }
+
                         let entities;
                         if (group.domains) {
                             entities = this.entitiesWithoutDevice.filter(e => {
@@ -1646,13 +2490,92 @@
                     });
                 },
 
+                // Computed: Broken references filtered by selected area
+                get filteredBrokenReferences() {
+                    if (!this.selectedArea || !this.brokenReferences.length) {
+                        return this.brokenReferences;
+                    }
+
+                    // Filter by area_id (assigned area of the automation/scene/script)
+                    return this.brokenReferences.filter(ref => ref.area_id === this.selectedArea);
+                },
+
+                // Computed: Broken references grouped by missing_entity_id
+                get groupedBrokenReferences() {
+                    const groups = {};
+                    for (const ref of this.filteredBrokenReferences) {
+                        if (!groups[ref.missing_entity_id]) {
+                            groups[ref.missing_entity_id] = {
+                                missing_entity_id: ref.missing_entity_id,
+                                refs: []
+                            };
+                        }
+                        groups[ref.missing_entity_id].refs.push(ref);
+                    }
+                    // Sort groups by missing_entity_id
+                    return Object.values(groups).sort((a, b) =>
+                        a.missing_entity_id.localeCompare(b.missing_entity_id)
+                    );
+                },
+
                 // Computed: Count of entities that need renaming
                 get pendingChangesCount() {
                     return this.filteredEntities.filter(e => this.entityNeedsRename(e)).length;
                 },
 
+                // Computed: Count of disabled entities in current selection (only when showDisabled is true)
+                get disabledEntitiesCount() {
+                    if (!this.showDisabled || !this.selectedDevice) return 0;
+                    return this.filteredEntities.filter(e => e.disabled_by).length;
+                },
+
+                // Enable all disabled entities in current selection
+                async enableAllDisabled() {
+                    const disabledEntities = this.filteredEntities.filter(e => e.disabled_by);
+                    if (disabledEntities.length === 0) return;
+
+                    this.executing = true;
+                    this.executingProgress = 0;
+                    this.executingTotal = disabledEntities.length;
+                    let successCount = 0;
+                    let failedCount = 0;
+
+                    for (let i = 0; i < disabledEntities.length; i++) {
+                        const entity = disabledEntities[i];
+                        try {
+                            const response = await fetch('api/enable_entity', {
+                                method: 'POST',
+                                headers: {'Content-Type': 'application/json'},
+                                body: JSON.stringify({ entity_id: entity.id })
+                            });
+                            const data = await response.json();
+                            if (data.success) {
+                                entity.disabled_by = null;
+                                successCount++;
+                            } else {
+                                failedCount++;
+                            }
+                        } catch (error) {
+                            failedCount++;
+                        }
+                        this.executingProgress = i + 1;
+                    }
+
+                    this.executing = false;
+                    this.executingProgress = 0;
+                    this.executingTotal = 0;
+                    if (failedCount > 0) {
+                        this.showMessage(`${successCount} enabled, ${failedCount} failed`, 'error');
+                    } else {
+                        this.showMessage(`${successCount} entities enabled`, 'success');
+                    }
+                },
+
                 // Initialize
                 async init() {
+                    // Wait for styles to be applied before doing anything
+                    await new Promise(resolve => requestAnimationFrame(resolve));
+
                     // Initialize translations and wait for them to be ready
                     if (window.translations) {
                         await window.translations.init();
@@ -1667,6 +2590,9 @@
 
                     // Load hierarchy
                     await this.loadHierarchy();
+
+                    // Load broken references in background (for count in sidebar)
+                    this.loadBrokenReferences();
 
                     // Restore selection from localStorage/URL
                     this.restoreState();
@@ -1740,25 +2666,238 @@
 
                     // Apply restored selection
                     if (areaId) {
-                        const area = this.hierarchy.areas.find(a => a.id === areaId);
-                        if (area) {
-                            this.selectedArea = area.id;
-                            this.selectedAreaData = area;
+                        // Special handling for "__no_area__"
+                        if (areaId === '__no_area__') {
+                            const devicesWithoutArea = this.hierarchy.devices.filter(d => !d.area_id);
+                            if (devicesWithoutArea.length > 0) {
+                                this.selectedArea = '__no_area__';
+                                this.selectedAreaData = {
+                                    id: '__no_area__',
+                                    name: this.t('area.no_area'),
+                                    isSpecial: true,
+                                    deviceCount: devicesWithoutArea.length
+                                };
 
-                            if (deviceId) {
-                                if (this.isVirtualDevice(deviceId)) {
-                                    // Virtual device (automations, scenes, helpers, etc.)
-                                    this.selectedDevice = deviceId;
-                                    this.selectedDeviceData = null;
-                                } else {
-                                    const device = this.hierarchy.devices.find(d => d.id === deviceId);
+                                if (deviceId) {
+                                    const device = devicesWithoutArea.find(d => d.id === deviceId);
                                     if (device) {
                                         this.selectedDevice = device.id;
                                         this.selectedDeviceData = device;
                                     }
                                 }
                             }
+                        } else {
+                            const area = this.hierarchy.areas.find(a => a.id === areaId);
+                            if (area) {
+                                this.selectedArea = area.id;
+                                this.selectedAreaData = area;
+
+                                if (deviceId) {
+                                    if (this.isVirtualDevice(deviceId)) {
+                                        // Virtual device (automations, scenes, helpers, etc.)
+                                        this.selectedDevice = deviceId;
+                                        this.selectedDeviceData = null;
+                                    } else {
+                                        const device = this.hierarchy.devices.find(d => d.id === deviceId);
+                                        if (device) {
+                                            this.selectedDevice = device.id;
+                                            this.selectedDeviceData = device;
+                                        }
+                                    }
+                                }
+                            }
                         }
+                    }
+                },
+
+                // ===== BROKEN REFERENCES METHODS =====
+
+                async loadBrokenReferences(forceRefresh = false) {
+                    if (this.brokenRefsCached && !forceRefresh) return;
+
+                    this.brokenRefsLoading = true;
+
+                    // Clear suggestions cache on force refresh so they get reloaded with fresh entity data
+                    if (forceRefresh) {
+                        this.brokenRefSuggestions = {};
+                        this.selectedReplacement = {};
+                    }
+
+                    try {
+                        const url = forceRefresh ? 'api/broken_references?refresh=true' : 'api/broken_references';
+                        const response = await fetch(url);
+                        const data = await response.json();
+
+                        if (data.error) {
+                            throw new Error(data.error);
+                        }
+
+                        this.brokenReferences = data.broken || [];
+                        this.brokenRefsCached = true;
+
+                        // Load suggestions for each broken reference (in parallel)
+                        const uniqueMissingIds = [...new Set(this.brokenReferences.map(r => r.missing_entity_id))];
+                        await Promise.all(uniqueMissingIds.map(id => this.loadSuggestionsFor(id)));
+                    } catch (error) {
+                        console.error('Error loading broken references:', error);
+                        this.showMessage(this.t('messages.error') + ': ' + error.message, 'error');
+                    } finally {
+                        this.brokenRefsLoading = false;
+                    }
+                },
+
+                async loadSuggestionsFor(missingEntityId) {
+                    // Skip if already loaded (check for array, not just truthy)
+                    if (Array.isArray(this.brokenRefSuggestions[missingEntityId])) return;
+
+                    try {
+                        const response = await fetch(`api/suggestions/${encodeURIComponent(missingEntityId)}`);
+                        const data = await response.json();
+
+                        if (!data.error) {
+                            const suggestions = data.suggestions || [];
+
+                            // Use spread to trigger Alpine reactivity
+                            this.brokenRefSuggestions = {
+                                ...this.brokenRefSuggestions,
+                                [missingEntityId]: suggestions
+                            };
+
+                            // Auto-select best match if score is high (green, >= 0.7)
+                            if (suggestions.length > 0 && suggestions[0].score >= 0.7) {
+                                this.selectedReplacement = {
+                                    ...this.selectedReplacement,
+                                    [missingEntityId]: suggestions[0].entity_id
+                                };
+                            }
+                        }
+                    } catch (error) {
+                        console.error(`Error loading suggestions for ${missingEntityId}:`, error);
+                    }
+                },
+
+                getSuggestionsFor(missingEntityId) {
+                    return this.brokenRefSuggestions[missingEntityId] || [];
+                },
+
+                async fixReference(ref) {
+                    const replacement = this.selectedReplacement[ref.missing_entity_id];
+                    if (!replacement) {
+                        this.showMessage(this.t('broken_refs.select_replacement'), 'error');
+                        return;
+                    }
+
+                    try {
+                        // Fix ALL references with the same missing_entity_id at once
+                        const response = await fetch('api/fix_reference', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                old_entity_id: ref.missing_entity_id,
+                                new_entity_id: replacement
+                            })
+                        });
+
+                        const data = await response.json();
+
+                        if (data.success) {
+                            // Show count of fixed references
+                            const fixedCount = data.fixed_count || 1;
+                            const message = fixedCount > 1
+                                ? `${fixedCount} ${this.t('broken_refs.fixed_successfully')}`
+                                : this.t('broken_refs.fixed_successfully');
+                            this.showMessage(message, 'success');
+
+                            // Remove ALL references with this missing_entity_id from list
+                            this.brokenReferences = this.brokenReferences.filter(r =>
+                                r.missing_entity_id !== ref.missing_entity_id
+                            );
+
+                            // Cleanup - use spread to trigger Alpine reactivity
+                            const { [ref.missing_entity_id]: _sel, ...restSelected } = this.selectedReplacement;
+                            this.selectedReplacement = restSelected;
+
+                            const { [ref.missing_entity_id]: _sug, ...restSuggestions } = this.brokenRefSuggestions;
+                            this.brokenRefSuggestions = restSuggestions;
+
+                            this.expandedBrokenRef = null;
+
+                            // Mark cache as stale for next manual refresh
+                            this.brokenRefsCached = false;
+                        } else {
+                            throw new Error(data.error || 'Unknown error');
+                        }
+                    } catch (error) {
+                        console.error('Error fixing reference:', error);
+                        this.showMessage(this.t('messages.error') + ': ' + error.message, 'error');
+                    }
+                },
+
+                getConfigIcon(configType) {
+                    const icons = {
+                        'automation': 'ri-robot-line',
+                        'scene': 'ri-palette-line',
+                        'script': 'ri-terminal-box-line'
+                    };
+                    return icons[configType] || 'ri-question-line';
+                },
+
+                getHAConfigUrl(ref) {
+                    const baseUrl = window.location.origin.replace(/:\d+$/, ':8123');
+                    if (ref.config_type === 'automation') {
+                        // Use numeric_id for automation edit links (required by HA)
+                        const id = ref.numeric_id || ref.config_id.replace('automation.', '');
+                        return `${baseUrl}/config/automation/edit/${id}`;
+                    } else if (ref.config_type === 'scene') {
+                        // Use numeric_id for scene edit links (required by HA)
+                        const id = ref.numeric_id || ref.config_id.replace('scene.', '');
+                        return `${baseUrl}/config/scene/edit/${id}`;
+                    } else if (ref.config_type === 'script') {
+                        return `${baseUrl}/config/script/edit/${ref.config_id.replace('script.', '')}`;
+                    }
+                    return '#';
+                },
+
+                toggleAutocomplete(missingEntityId) {
+                    this.showAutocomplete[missingEntityId] = !this.showAutocomplete[missingEntityId];
+                    if (this.showAutocomplete[missingEntityId] && this.allEntitiesForSearch.length === 0) {
+                        this.loadAllEntitiesForSearch();
+                    }
+                },
+
+                async loadAllEntitiesForSearch() {
+                    try {
+                        const response = await fetch('api/all_entities');
+                        const data = await response.json();
+                        this.allEntitiesForSearch = data.entities || [];
+                    } catch (error) {
+                        console.error('Error loading entities for search:', error);
+                    }
+                },
+
+                getFilteredEntitiesForSearch(missingEntityId) {
+                    const query = (this.searchQuery[missingEntityId] || '').toLowerCase();
+                    if (!query) return this.allEntitiesForSearch.slice(0, 20);
+
+                    return this.allEntitiesForSearch
+                        .filter(e => e.entity_id.toLowerCase().includes(query) ||
+                                    (e.friendly_name && e.friendly_name.toLowerCase().includes(query)))
+                        .slice(0, 20);
+                },
+
+                selectEntityFromSearch(missingEntityId, entityId) {
+                    this.selectedReplacement[missingEntityId] = entityId;
+                    this.showAutocomplete[missingEntityId] = false;
+                    this.searchQuery[missingEntityId] = '';
+                },
+
+                selectVirtualDevice(deviceId) {
+                    this.selectedDevice = deviceId;
+                    this.selectedEntities = [];
+
+                    // If broken refs selected, load them
+                    if (deviceId === '__broken_refs__') {
+                        this.loadBrokenReferences();
                     }
                 },
 
@@ -1789,7 +2928,6 @@
                                 }
                             }
                         }
-                        console.log('[EntityManager] User suffix mappings loaded:', Object.keys(newSuffixMappings).length, newSuffixMappings);
 
                         // Set both suffixMappings and hierarchy together
                         // Use Object.assign to trigger a single reactivity update
@@ -1798,10 +2936,13 @@
                             hierarchy: {
                                 areas: data.areas || [],
                                 devices: data.devices || [],
-                                entities: (data.entities || []).map(e => ({...e, selected: false, _editing: false, _remember: false}))
+                                entities: (data.entities || []).map(e => ({...e, selected: false, _editing: false, _remember: false, _applying: false}))
                             },
                             stats: data.stats || {}
                         });
+
+                        // Precompute preview values for all entities (performance optimization)
+                        this.precomputeEntityPreviews();
 
                     } catch (error) {
                         console.error('Error loading hierarchy:', error);
@@ -1850,6 +2991,7 @@
                     this.selectedAreaData = area;
                     this.selectedDevice = null;
                     this.selectedDeviceData = null;
+                    this.devicePreviewBaseName = null;  // Clear preview when switching areas
                     this.deviceFilter = '';  // Reset device filter
                     this.saveState();
 
@@ -1863,6 +3005,7 @@
                 selectDevice(device) {
                     this.selectedDevice = device.id;
                     this.selectedDeviceData = device;
+                    this.devicePreviewBaseName = null;  // Clear preview when switching devices
                     this.saveState();
 
                     // Mobile: Navigate to entities
@@ -1875,6 +3018,7 @@
                 selectVirtualDevice(virtualDeviceId) {
                     this.selectedDevice = virtualDeviceId;
                     this.selectedDeviceData = null;
+                    this.devicePreviewBaseName = null;  // Clear preview when switching devices
                     this.saveState();
 
                     // Mobile: Navigate to entities
@@ -1933,50 +3077,24 @@
                         parts.push(area.name);
                     }
 
-                    // Device base name
+                    // Device base name (use preview if editing)
                     const device = this.selectedDeviceData;
                     if (device && !this.isVirtualDevice(this.selectedDevice)) {
-                        parts.push(device.base_name);
+                        const deviceBase = this.devicePreviewBaseName !== null ? this.devicePreviewBaseName : device.base_name;
+                        parts.push(deviceBase);
                     }
 
-                    // Entity base name - check for user suffix mapping first, then fallback
-                    // Note: entity.override_name is intentionally ignored - only type mappings are used
-                    let entitySuffix = '';
-                    // Check if there's a user mapping for the base_name or domain
-                    const userMapping = this.getUserSuffixMapping(entity.base_name, domain);
-                    if (userMapping) {
-                        entitySuffix = userMapping;
-                    } else {
-                        entitySuffix = entity.base_name || '';
-                        if (!entitySuffix || entitySuffix.toLowerCase() === domain) {
-                            entitySuffix = this.getTypeMappingSuggestion(entity);
-                        }
-                    }
-
-                    parts.push(entitySuffix);
+                    // Entity suffix (uses shared logic)
+                    parts.push(this.getEntitySuffix(entity));
 
                     return parts.filter(p => p).join(' ');
                 },
 
-                // Get entity display name (short - just the entity base name)
+                // Get entity display name (short - just the entity suffix)
                 getEntityDisplayName(entity) {
                     // Force Alpine to track translationsReady as dependency
                     const _ = this.translationsReady;
-
-                    // Note: entity.override_name is intentionally ignored - only type mappings are used
-                    // Check for user suffix mapping (base_name or domain)
-                    const domain = entity?.id?.split('.')[0];
-                    const userMapping = this.getUserSuffixMapping(entity?.base_name, domain);
-                    if (userMapping) {
-                        return userMapping;
-                    }
-
-                    // Fallback to base_name or type mapping
-                    let suffix = entity?.base_name || '';
-                    if (!suffix || suffix.toLowerCase() === domain) {
-                        return this.getTypeMappingSuggestion(entity);
-                    }
-                    return suffix;
+                    return this.getEntitySuffix(entity);
                 },
 
                 // Get new entity ID
@@ -1997,10 +3115,11 @@
                         parts.push(area.name);
                     }
 
-                    // Device base name
+                    // Device base name (use preview if editing)
                     const device = this.selectedDeviceData;
                     if (device && !this.isVirtualDevice(this.selectedDevice)) {
-                        parts.push(device.base_name);
+                        const deviceBase = this.devicePreviewBaseName !== null ? this.devicePreviewBaseName : device.base_name;
+                        parts.push(deviceBase);
                     }
 
                     // Entity: use _editValue for live preview (override_name intentionally ignored)
@@ -2031,17 +3150,18 @@
 
                 // Check if entity needs rename (uses entity's own device/area context)
                 entityNeedsRename(entity) {
-                    // Check if there's a manual preview change pending
-                    if (entity._previewName && entity._previewName !== entity.original_name) {
-                        return true;
-                    }
-                    if (entity._previewId && entity._previewId !== entity.id) {
-                        return true;
+                    // Touch previewVersion to ensure Alpine re-evaluates when previews change
+                    const _ = this.previewVersion;
+
+                    // Entity was just renamed in this session - no further changes needed
+                    if (entity._justRenamed) {
+                        return false;
                     }
 
-                    // Check computed values from naming convention
-                    const newId = this.getNewEntityIdForEntity(entity);
-                    const newName = this.getEntityFriendlyNameForEntity(entity);
+                    // Use cached preview values (computed once in precomputeEntityPreviews)
+                    const newName = entity._previewName || this.getEntityFriendlyNameForEntity(entity);
+                    const newId = entity._previewId || this.getNewEntityIdForEntity(entity);
+
                     return entity.id !== newId || entity.original_name !== newName;
                 },
 
@@ -2070,21 +3190,8 @@
                         parts.push(device.base_name);
                     }
 
-                    // Entity base name - check for user suffix mapping first, then fallback
-                    // Note: entity.override_name is intentionally ignored - only type mappings are used
-                    let entitySuffix = '';
-                    // Check if there's a user mapping for the base_name or domain
-                    const domain = entity.id.split('.')[0];
-                    const userMapping = this.getUserSuffixMapping(entity.base_name, domain);
-                    if (userMapping) {
-                        entitySuffix = userMapping;
-                    } else {
-                        entitySuffix = entity.base_name || '';
-                        if (!entitySuffix || entitySuffix.toLowerCase() === domain) {
-                            entitySuffix = this.getTypeMappingSuggestion(entity);
-                        }
-                    }
-                    parts.push(entitySuffix);
+                    // Entity suffix (uses shared logic)
+                    parts.push(this.getEntitySuffix(entity));
 
                     return parts.filter(p => p).join(' ');
                 },
@@ -2092,16 +3199,44 @@
                 // Get new entity ID using entity's own context
                 getNewEntityIdForEntity(entity) {
                     const domain = entity.id.split('.')[0];
-                    const friendlyName = this.getEntityFriendlyNameForEntity(entity);
+                    const friendlyName = entity._previewName || this.getEntityFriendlyNameForEntity(entity);
                     const normalized = this.normalizeName(friendlyName);
                     return `${domain}.${normalized}`;
+                },
+
+                // Precompute preview values for all entities (called once after loading)
+                precomputeEntityPreviews() {
+                    if (!this.hierarchy?.entities) return;
+
+                    for (const entity of this.hierarchy.entities) {
+                        // Skip if already computed (e.g. from user edit) or just renamed
+                        if (entity._previewName || entity._justRenamed) continue;
+
+                        // Compute and cache preview values
+                        entity._previewName = this.getEntityFriendlyNameForEntity(entity);
+                        entity._previewId = this.getNewEntityIdForEntity(entity);
+                    }
+                },
+
+                // Invalidate cached previews (call after rename to refresh conflict detection)
+                invalidateEntityPreviews() {
+                    if (!this.hierarchy?.entities) return;
+
+                    for (const entity of this.hierarchy.entities) {
+                        // Don't invalidate entities that were just renamed or are being edited
+                        if (entity._justRenamed || entity._currentSuffix !== undefined) continue;
+
+                        entity._previewName = null;
+                        entity._previewId = null;
+                    }
+                    // Recompute all previews
+                    this.precomputeEntityPreviews();
                 },
 
                 // Check if the target entity ID is already taken by another entity
                 isEntityIdTaken(entity) {
                     const newId = entity._previewId || this.getNewEntityIdForEntity(entity);
                     if (newId === entity.id) return false; // Same ID, no conflict
-                    // Check if any other entity has this ID
                     return this.hierarchy.entities.some(e => e.id === newId && e.registry_id !== entity.registry_id);
                 },
 
@@ -2111,7 +3246,10 @@
                     if (!device) return '';
                     const area = this.hierarchy.areas.find(a => a.id === device.area_id);
                     const areaName = area ? (area.name) : '';
-                    const deviceBase = device.base_name;
+                    // Use preview value if editing, otherwise use device.base_name
+                    const deviceBase = (device.id === this.selectedDevice && this.devicePreviewBaseName !== null)
+                        ? this.devicePreviewBaseName
+                        : device.base_name;
 
                     if (areaName && deviceBase) {
                         return `${areaName} ${deviceBase}`;
@@ -2314,7 +3452,7 @@
 
                 // Quick apply entity rename
                 async quickApplyEntity(entity) {
-                    if (!entity) return;
+                    if (!entity || this.applyingEntityId) return;
 
                     // Trim suffix before saving
                     if (entity._currentSuffix !== undefined) {
@@ -2338,6 +3476,7 @@
                         return;
                     }
 
+                    this.applyingEntityId = entity.id;
                     try {
                         // Note: No entity-specific overrides are saved - only type mappings are used
                         // Rename in HA
@@ -2356,13 +3495,27 @@
                             // Update local entity data
                             entity.id = newId;
                             entity.original_name = newName;
+                            // Update base_name to the new suffix so input field shows correct value
+                            if (entity._currentSuffix !== undefined) {
+                                entity.base_name = entity._currentSuffix;
+                            }
                             entity._expanded = false;
+                            entity._previewName = null;
+                            entity._previewId = null;
+                            entity._currentSuffix = undefined;
+                            entity._justRenamed = true;  // Mark as renamed so it doesn't show as needing change
+
+                            // Recompute previews for other entities (IDs may have changed)
+                            this.invalidateEntityPreviews();
+
                             this.showMessage(`Renamed to "${newName}"`, 'success');
                         } else {
                             throw new Error(data.error || 'Rename failed');
                         }
                     } catch (error) {
                         this.showMessage('Error: ' + error.message, 'error');
+                    } finally {
+                        this.applyingEntityId = null;
                     }
                 },
 
@@ -2370,13 +3523,8 @@
                 toggleEntityExpand(entity) {
                     entity._expanded = !entity._expanded;
                     if (entity._expanded && entity._currentSuffix === undefined) {
-                        // Only initialize preview when expanding for the first time
-                        // Note: override_name intentionally ignored - only type mappings are used
-                        let initialSuffix = entity.base_name || '';
-                        const domain = entity.id.split('.')[0];
-                        if (!initialSuffix || initialSuffix.toLowerCase() === domain) {
-                            initialSuffix = this.getTypeMappingSuggestion(entity);
-                        }
+                        // Initialize preview with shared suffix logic (same as collapsed view)
+                        const initialSuffix = this.getEntitySuffix(entity);
                         this.updateEntityPreview(entity, initialSuffix);
                     }
                 },
@@ -2409,9 +3557,26 @@
 
                     entity._previewName = friendlyName;
                     entity._previewId = entityId;
+
+                    // Force Alpine to re-evaluate dependent expressions
+                    this.previewVersion++;
                 },
 
                 // Get type mapping suggestion for an entity
+                // Get the correct suffix for an entity (shared logic for display and editing)
+                getEntitySuffix(entity) {
+                    const domain = entity.id.split('.')[0];
+                    const userMapping = this.getUserSuffixMapping(entity.base_name, domain);
+                    if (userMapping) {
+                        return userMapping;
+                    }
+                    const baseName = entity.base_name || '';
+                    if (!baseName || baseName.toLowerCase() === domain) {
+                        return this.getTypeMappingSuggestion(entity);
+                    }
+                    return baseName;
+                },
+
                 getTypeMappingSuggestion(entity) {
                     // Force Alpine to track translationsReady as dependency
                     const _ = this.translationsReady;
@@ -2472,9 +3637,16 @@
                         if (this.suffixMappings[baseNameHyphens]) {
                             return this.suffixMappings[baseNameHyphens];
                         }
+
+                        // If base_name exists and is different from domain, don't fall back to domain mapping
+                        // The base_name is valid and should be used as-is
+                        if (baseNameLower !== domain?.toLowerCase()) {
+                            return null;
+                        }
                     }
 
-                    // 2. Check domain mapping (for cases like update -> Firmwareaktualisierung)
+                    // 2. Check domain mapping ONLY when base_name is empty or equals domain
+                    // (for cases like update -> Firmwareaktualisierung)
                     if (domain) {
                         const domainLower = domain.toLowerCase();
                         if (this.suffixMappings[domainLower]) {
@@ -2486,7 +3658,9 @@
                 },
 
                 // Apply the type mapping suggestion to the suffix input
-                applyTypeMappingSuffix(entity) {
+                // This explicitly uses getTypeMappingSuggestion() because the user
+                // wants something OTHER than the current base_name
+                applySuggestion(entity) {
                     const suggestion = this.getTypeMappingSuggestion(entity);
                     entity._currentSuffix = suggestion;
                     this.updateEntityPreview(entity, suggestion);
@@ -2616,6 +3790,42 @@
                     }
                 },
 
+                async assignDeviceArea(deviceId, areaId) {
+                    if (!deviceId || !areaId) return;
+
+                    try {
+                        const response = await fetch('api/assign_device_area', {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({
+                                device_id: deviceId,
+                                area_id: areaId
+                            })
+                        });
+
+                        const data = await response.json();
+                        if (data.success) {
+                            // Update device in hierarchy
+                            const device = this.hierarchy.devices.find(d => d.id === deviceId);
+                            if (device) {
+                                device.area_id = areaId;
+                            }
+
+                            // Also update entities of this device
+                            this.hierarchy.entities
+                                .filter(e => e.device_id === deviceId)
+                                .forEach(e => e.area_id = areaId);
+
+                            const area = this.hierarchy.areas.find(a => a.id === areaId);
+                            this.showMessage(this.t('area.area_assigned') + ': ' + (area?.name || areaId), 'success');
+                        } else {
+                            throw new Error(data.error || 'Failed to assign area');
+                        }
+                    } catch (error) {
+                        this.showMessage('Error: ' + error.message, 'error');
+                    }
+                },
+
                 // Execute rename in HA (no entity-specific overrides are saved)
                 async saveEntitySuffix(entity) {
                     if (!entity) return;
@@ -2655,6 +3865,12 @@
                             // Update local entity data
                             entity.id = newId;
                             entity.original_name = newName;
+                            // Update base_name to the new suffix so input field shows correct value
+                            if (entity._currentSuffix !== undefined) {
+                                entity.base_name = entity._currentSuffix;
+                            }
+                            entity._currentSuffix = undefined;
+                            entity._justRenamed = true;
                         } else {
                             throw new Error(renameData.error || 'Rename failed');
                         }
@@ -2707,19 +3923,20 @@
 
                 // Rename device directly in HA
                 async renameDeviceInHA(newBaseName) {
-                    if (!this.selectedDevice || this.isVirtualDevice(this.selectedDevice) || !newBaseName) return;
+                    if (!this.selectedDevice || this.isVirtualDevice(this.selectedDevice) || !newBaseName || this.renamingDevice) return;
 
+                    // Build full device name with area prefix
+                    const area = this.hierarchy.areas.find(a => a.id === this.selectedDeviceData?.area_id);
+                    const areaName = area?.name || '';
+                    const newFullName = areaName ? `${areaName} ${newBaseName}` : newBaseName;
+
+                    if (this.selectedDeviceData.name === newFullName) {
+                        this.showMessage('Device name already correct', 'info');
+                        return;
+                    }
+
+                    this.renamingDevice = true;
                     try {
-                        // Build full device name with area prefix
-                        const area = this.hierarchy.areas.find(a => a.id === this.selectedDeviceData?.area_id);
-                        const areaName = area?.name || '';
-                        const newFullName = areaName ? `${areaName} ${newBaseName}` : newBaseName;
-
-                        if (this.selectedDeviceData.name === newFullName) {
-                            this.showMessage('Device name already correct', 'info');
-                            return;
-                        }
-
                         // Rename the device directly in HA
                         const response = await fetch('api/rename_device', {
                             method: 'POST',
@@ -2740,12 +3957,15 @@
                                 device.name = newFullName;
                                 device.base_name = newBaseName;
                             }
+                            this.devicePreviewBaseName = null;  // Clear preview after successful rename
                             this.showMessage(`Device renamed to "${newFullName}"`, 'success');
                         } else {
                             throw new Error(data.error || 'Failed to rename device');
                         }
                     } catch (error) {
                         this.showMessage('Error: ' + error.message, 'error');
+                    } finally {
+                        this.renamingDevice = false;
                     }
                 },
 
@@ -2768,7 +3988,7 @@
                     }
                 },
 
-                // Execute ALL pending changes (simplified - no selection needed)
+                // Execute ALL pending changes with batch processing to avoid timeouts
                 async executeAllChanges() {
                     // Find all entities that need renaming
                     const entitiesToChange = this.filteredEntities.filter(e => this.entityNeedsRename(e));
@@ -2778,27 +3998,53 @@
                     }
 
                     this.executing = true;
+                    this.executingProgress = 0;
+                    this.executingTotal = entitiesToChange.length;
+
+                    // Batch size - process 10 entities at a time to avoid timeouts
+                    const BATCH_SIZE = 10;
+                    const results = { success: [], failed: [], skipped: [] };
 
                     try {
                         // Build the payload with entity details
-                        const entities = entitiesToChange.map(e => ({
+                        const allEntities = entitiesToChange.map(e => ({
                             old_id: e.id,
-                            new_id: this.getNewEntityId(e),
-                            new_name: this.getEntityFriendlyName(e),
+                            new_id: e._previewId || this.getNewEntityIdForEntity(e),
+                            new_name: e._previewName || this.getEntityFriendlyNameForEntity(e),
                             registry_id: e.registry_id
                         }));
 
-                        const response = await fetch('api/execute_direct', {
-                            method: 'POST',
-                            headers: {'Content-Type': 'application/json'},
-                            body: JSON.stringify({ entities })
-                        });
+                        // Process in batches
+                        for (let i = 0; i < allEntities.length; i += BATCH_SIZE) {
+                            const batch = allEntities.slice(i, i + BATCH_SIZE);
 
-                        const data = await response.json();
+                            try {
+                                const response = await fetch('api/execute_direct', {
+                                    method: 'POST',
+                                    headers: {'Content-Type': 'application/json'},
+                                    body: JSON.stringify({ entities: batch })
+                                });
 
-                        const successCount = data.success?.length || 0;
-                        const failedCount = data.failed?.length || 0;
-                        const skippedCount = data.skipped?.length || 0;
+                                if (!response.ok) {
+                                    // Server error - mark all in batch as failed
+                                    batch.forEach(e => results.failed.push({ entity_id: e.old_id, error: `HTTP ${response.status}` }));
+                                } else {
+                                    const data = await response.json();
+                                    results.success.push(...(data.success || []));
+                                    results.failed.push(...(data.failed || []));
+                                    results.skipped.push(...(data.skipped || []));
+                                }
+                            } catch (batchError) {
+                                // Network error - mark all in batch as failed
+                                batch.forEach(e => results.failed.push({ entity_id: e.old_id, error: batchError.message }));
+                            }
+
+                            // Update progress
+                            this.executingProgress = Math.min(i + BATCH_SIZE, allEntities.length);
+                        }
+
+                        const successCount = results.success.length;
+                        const failedCount = results.failed.length;
 
                         if (failedCount > 0) {
                             this.showMessage(`${successCount} succeeded, ${failedCount} failed`, 'error');
@@ -2806,12 +4052,17 @@
                             this.showMessage(`${successCount} entities renamed successfully`, 'success');
                         }
 
+                        // Wait a moment for HA to persist changes before reload
+                        await new Promise(resolve => setTimeout(resolve, 1000));
+
                         // Reload to show updated state
                         await this.loadHierarchy();
                     } catch (error) {
                         this.showMessage('Error: ' + error.message, 'error');
                     } finally {
                         this.executing = false;
+                        this.executingProgress = 0;
+                        this.executingTotal = 0;
                     }
                 },
 

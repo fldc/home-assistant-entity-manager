@@ -23,7 +23,11 @@
   "area": {
     "name_override_label": "Anulación de nombre de área",
     "placeholder": "Nombre de área...",
-    "no_areas": "No se encontraron áreas"
+    "no_areas": "No se encontraron áreas",
+    "no_area": "Sin Área",
+    "assign_area": "Asignar Área",
+    "select_area": "Seleccionar área...",
+    "area_assigned": "Dispositivo asignado al área"
   },
   "summary": {
     "entities": "Entidades",
@@ -87,7 +91,24 @@
     "scripts": "Scripts",
     "schedules": "Horarios",
     "helpers": "Ayudantes",
-    "other": "Otros"
+    "other": "Otros",
+    "broken_refs": "Referencias rotas"
+  },
+  "broken_refs": {
+    "broken_refs": "referencias rotas",
+    "scanning": "Escaneando...",
+    "no_broken": "¡No se encontraron referencias rotas!",
+    "missing": "Falta",
+    "replacement": "Reemplazo",
+    "click_to_select": "Clic para seleccionar...",
+    "suggestions": "Sugerencias:",
+    "search_other": "Buscar otra entidad...",
+    "search_placeholder": "Buscar entidad...",
+    "replace_with": "Reemplazar por:",
+    "fix": "Corregir referencia",
+    "fixed_successfully": "Referencia corregida exitosamente",
+    "select_replacement": "Por favor seleccione una entidad de reemplazo",
+    "open_in_ha": "Abrir en Home Assistant"
   },
   "messages": {
     "loading": "Cargando...",
@@ -232,7 +253,9 @@
   },
   "action_bar": {
     "pending_changes": "cambios pendientes",
+    "disabled_entities": "desactivados",
     "apply_all": "Aplicar todos los cambios",
+    "enable_all": "Activar Todos",
     "applying": "Aplicando..."
   },
   "type_mappings": {

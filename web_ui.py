@@ -10,6 +10,7 @@ import os
 import re
 import time
 import unicodedata
+from typing import Optional
 
 import aiohttp
 from flask import Flask, jsonify, make_response, render_template, request, send_from_directory
@@ -17,6 +18,7 @@ from flask_cors import CORS
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 from dependency_updater import DependencyUpdater
+from reference_checker import ReferenceChecker
 from device_registry import DeviceRegistry
 from entity_registry import EntityRegistry
 from entity_restructurer import EntityRestructurer
@@ -1127,6 +1129,9 @@ async def _execute_changes_async():
     # Delete preview
     del renamer_state["proposed_changes"][preview_id]
 
+    # Invalidate broken references cache after changes
+    invalidate_reference_checker_cache()
+
     return jsonify(results)
 
 
@@ -1183,14 +1188,24 @@ async def _execute_direct_async():
                 results["failed"].append({"entity_id": old_id, "error": "Missing old_id or new_id"})
                 continue
 
-            # Skip if no change needed
-            if old_id == new_id:
-                results["skipped"].append({"entity_id": old_id, "reason": "Keine Änderung nötig"})
-                continue
-
             try:
                 # Check if entity is disabled and if we should enable it
                 entity_reg = renamer_state["restructurer"].entities.get(old_id, {})
+                current_name = entity_reg.get("original_name") or entity_reg.get("name")
+
+                # Skip only if BOTH ID and name are unchanged
+                id_unchanged = old_id == new_id
+                name_unchanged = friendly_name == current_name
+                if id_unchanged and name_unchanged:
+                    results["skipped"].append({"entity_id": old_id, "reason": "Keine Änderung nötig"})
+                    continue
+
+                # Log what's changing
+                if id_unchanged:
+                    logger.info(f"Name-only change for {old_id}: '{current_name}' -> '{friendly_name}'")
+                else:
+                    logger.info(f"ID change: {old_id} -> {new_id}, name: '{friendly_name}'")
+
                 is_disabled = entity_reg.get("disabled_by") is not None
                 should_enable = is_disabled and os.getenv("ENABLE_DISABLED_ENTITIES", "false").lower() == "true"
 
@@ -1222,6 +1237,9 @@ async def _execute_direct_async():
 
     finally:
         await ws.disconnect()
+
+    # Invalidate broken references cache after changes
+    invalidate_reference_checker_cache()
 
     return jsonify(results)
 
@@ -1412,6 +1430,236 @@ async def _get_dependencies_async(entity_id):
         dependencies = {"error": str(e)}
 
     return jsonify(dependencies)
+
+
+# Global reference checker instance (cached)
+_reference_checker: Optional[ReferenceChecker] = None
+
+
+def get_reference_checker() -> ReferenceChecker:
+    """Get or create the reference checker instance."""
+    global _reference_checker
+    base_url = os.getenv("HA_URL")
+    token = os.getenv("HA_TOKEN")
+    if _reference_checker is None:
+        _reference_checker = ReferenceChecker(base_url, token)
+    return _reference_checker
+
+
+def invalidate_reference_checker_cache():
+    """Invalidate the reference checker cache."""
+    global _reference_checker
+    if _reference_checker is not None:
+        _reference_checker.invalidate_cache()
+
+
+@app.route("/api/broken_references")
+def get_broken_references():
+    """Hole alle broken references (verwaiste Entity-Referenzen)."""
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    try:
+        return loop.run_until_complete(_get_broken_references_async())
+    finally:
+        loop.close()
+
+
+async def _get_broken_references_async():
+    """Async implementation of get_broken_references."""
+    force_refresh = request.args.get("refresh", "false").lower() == "true"
+
+    try:
+        checker = get_reference_checker()
+
+        # Get entity registry from restructurer if available (for area_id lookup)
+        entity_registry = None
+        if renamer_state.get("restructurer") and renamer_state["restructurer"].entities:
+            entity_registry = renamer_state["restructurer"].entities
+
+        broken = await checker.scan_all_references(
+            use_cache=not force_refresh,
+            entity_registry=entity_registry
+        )
+
+        return jsonify({
+            "broken": [ref.to_dict() for ref in broken],
+            "total_broken": len(broken),
+            "cached": not force_refresh and checker._broken_refs_cache is not None
+        })
+    except Exception as e:
+        logger.error(f"Error scanning broken references: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/suggestions/<path:missing_entity_id>")
+def get_suggestions(missing_entity_id):
+    """Hole Ersatz-Vorschläge für eine fehlende Entity."""
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    try:
+        return loop.run_until_complete(_get_suggestions_async(missing_entity_id))
+    finally:
+        loop.close()
+
+
+async def _get_suggestions_async(missing_entity_id):
+    """Async implementation of get_suggestions."""
+    try:
+        checker = get_reference_checker()
+        suggestions = await checker.get_suggestions(missing_entity_id)
+
+        return jsonify({
+            "suggestions": [sug.to_dict() for sug in suggestions],
+            "missing_entity_id": missing_entity_id
+        })
+    except Exception as e:
+        logger.error(f"Error getting suggestions for {missing_entity_id}: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/fix_reference", methods=["POST"])
+def fix_reference():
+    """Ersetze eine Entity-Referenz in einer Config."""
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    try:
+        return loop.run_until_complete(_fix_reference_async())
+    finally:
+        loop.close()
+
+
+async def _fix_reference_async():
+    """Async implementation of fix_reference.
+
+    Fixes ALL broken references with the same missing_entity_id, not just one.
+    This way, when user maps entity A -> B, it applies everywhere.
+    """
+    data = request.json
+    is_valid, error = validate_json_input(
+        data, ["old_entity_id", "new_entity_id"]
+    )
+    if not is_valid:
+        return jsonify({"error": error}), 400
+
+    old_entity_id = sanitize_entity_id(data.get("old_entity_id"))
+    new_entity_id = sanitize_entity_id(data.get("new_entity_id"))
+
+    try:
+        base_url = os.getenv("HA_URL")
+        token = os.getenv("HA_TOKEN")
+
+        logger.info(f"Fixing ALL references: {old_entity_id} -> {new_entity_id}")
+
+        # Get all broken references to find all configs with this missing entity
+        checker = get_reference_checker()
+        broken_refs = await checker.scan_all_references(use_cache=True)
+
+        # Filter to only those with matching missing_entity_id
+        refs_to_fix = [r for r in broken_refs if r.missing_entity_id == old_entity_id]
+        logger.info(f"Found {len(refs_to_fix)} references to fix for {old_entity_id}")
+
+        if not refs_to_fix:
+            return jsonify({
+                "success": False,
+                "error": f"No broken references found for {old_entity_id}"
+            }), 404
+
+        # Use dependency updater to replace the references
+        updater = DependencyUpdater(base_url, token)
+        states = await updater.get_states()
+
+        # Build lookup for numeric IDs
+        state_lookup = {s["entity_id"]: s for s in states}
+
+        results = {"fixed": [], "failed": []}
+
+        for ref in refs_to_fix:
+            success = False
+            config_id = ref.config_id
+
+            if ref.config_type == "automation":
+                state = state_lookup.get(config_id)
+                if state:
+                    numeric_id = state.get("attributes", {}).get("id")
+                    if numeric_id:
+                        success = await updater.update_automation_entities(
+                            config_id, numeric_id, old_entity_id, new_entity_id
+                        )
+
+            elif ref.config_type == "scene":
+                state = state_lookup.get(config_id)
+                if state:
+                    numeric_id = state.get("attributes", {}).get("id")
+                    if numeric_id:
+                        success = await updater.update_scene_entities(
+                            config_id, numeric_id, old_entity_id, new_entity_id
+                        )
+
+            elif ref.config_type == "script":
+                success = await updater.update_script_entities(
+                    config_id, old_entity_id, new_entity_id
+                )
+
+            if success:
+                results["fixed"].append(config_id)
+                logger.info(f"Fixed {ref.config_type} {config_id}")
+            else:
+                results["failed"].append(config_id)
+                logger.warning(f"Failed to fix {ref.config_type} {config_id}")
+
+        # Invalidate cache after fixes
+        invalidate_reference_checker_cache()
+
+        total_fixed = len(results["fixed"])
+        total_failed = len(results["failed"])
+        logger.info(f"Fixed {total_fixed} references, {total_failed} failed")
+
+        if total_fixed > 0:
+            return jsonify({
+                "success": True,
+                "old_entity_id": old_entity_id,
+                "new_entity_id": new_entity_id,
+                "fixed_count": total_fixed,
+                "failed_count": total_failed,
+                "fixed": results["fixed"],
+                "failed": results["failed"]
+            })
+        else:
+            return jsonify({
+                "success": False,
+                "error": "Failed to update any references",
+                "failed": results["failed"]
+            }), 500
+
+    except Exception as e:
+        logger.error(f"Error fixing reference: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/all_entities")
+def get_all_entities():
+    """Hole alle Entities für Autocomplete."""
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    try:
+        return loop.run_until_complete(_get_all_entities_async())
+    finally:
+        loop.close()
+
+
+async def _get_all_entities_async():
+    """Async implementation of get_all_entities."""
+    try:
+        checker = get_reference_checker()
+        entities = await checker.get_all_entities()
+
+        return jsonify({
+            "entities": entities,
+            "total": len(entities)
+        })
+    except Exception as e:
+        logger.error(f"Error getting all entities: {e}")
+        return jsonify({"error": str(e)}), 500
 
 
 @app.route("/api/rename_device", methods=["POST"])
@@ -1700,6 +1948,56 @@ async def _enable_device_async():
         return jsonify({"error": str(e)}), 500
 
 
+@app.route("/api/assign_device_area", methods=["POST"])
+def assign_device_area():
+    """Assign a device to an area"""
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    try:
+        return loop.run_until_complete(_assign_device_area_async())
+    finally:
+        loop.close()
+
+
+async def _assign_device_area_async():
+    """Async implementation of assign_device_area"""
+    data = request.json
+    is_valid, error = validate_json_input(data, ["device_id"])
+    if not is_valid:
+        return jsonify({"error": error}), 400
+
+    device_id = sanitize_registry_id(data.get("device_id"))
+    area_id = data.get("area_id")  # Can be None to remove area assignment
+
+    if not device_id:
+        return jsonify({"error": "Invalid device ID"}), 400
+
+    # Sanitize area_id if provided
+    if area_id:
+        area_id = sanitize_registry_id(area_id)
+
+    try:
+        base_url = os.getenv("HA_URL")
+        token = os.getenv("HA_TOKEN")
+        ws_url = base_url.replace("https://", "wss://").replace("http://", "ws://") + "/api/websocket"
+
+        ws = HomeAssistantWebSocket(ws_url, token)
+        await ws.connect()
+
+        try:
+            device_registry = DeviceRegistry(ws)
+            await device_registry.assign_area(device_id, area_id)
+            logger.info(f"Assigned device {device_id} to area {area_id}")
+
+            return jsonify({"success": True, "device_id": device_id, "area_id": area_id})
+        finally:
+            await ws.disconnect()
+
+    except Exception as e:
+        logger.error(f"Error assigning device {device_id} to area: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
 @app.route("/api/rename_entity", methods=["POST"])
 def rename_entity():
     """Directly rename a single entity (entity_id and/or friendly_name)"""
@@ -1801,6 +2099,9 @@ async def _rename_entity_async():
                     response_data["dependencies_checked"] = False
                     response_data["dependencies_reason"] = "entity_id_unchanged"
 
+                # Invalidate broken references cache after rename
+                invalidate_reference_checker_cache()
+
                 return jsonify(response_data)
             else:
                 return jsonify({"error": "Rename failed"}), 500
@@ -1877,7 +2178,11 @@ def rename_device_in_ha():
 
 
 async def _rename_device_in_ha_async():
-    """Async implementation of rename_device_in_ha"""
+    """Async implementation of rename_device_in_ha.
+
+    When renaming a device, also updates all entity friendly names that belong
+    to this device by replacing the old device name with the new one.
+    """
     data = request.json
     is_valid, error = validate_json_input(data, ["device_id", "new_name"])
     if not is_valid:
@@ -1902,21 +2207,75 @@ async def _rename_device_in_ha_async():
         await ws.connect()
 
         try:
+            # Ensure restructurer is loaded
+            if renamer_state["restructurer"] is None:
+                renamer_state["restructurer"] = EntityRestructurer()
+            await renamer_state["restructurer"].load_structure(ws)
+
+            # Get old device name before renaming
+            old_device_name = None
+            if device_id in renamer_state["restructurer"].devices:
+                device = renamer_state["restructurer"].devices[device_id]
+                old_device_name = device.get("name_by_user") or device.get("name")
+
             device_registry = DeviceRegistry(ws)
             success = await device_registry.rename_device(device_id, new_name)
 
-            if success:
-                return jsonify(
-                    {
-                        "success": True,
-                        "message": f"Gerät erfolgreich umbenannt zu: {new_name}",
-                    }
-                )
-            else:
+            if not success:
                 return (
                     jsonify({"error": "Fehler beim Umbenennen des Geräts in Home Assistant"}),
                     500,
                 )
+
+            # Update entity friendly names if we know the old device name
+            entities_updated = 0
+            entities_failed = 0
+
+            if old_device_name and old_device_name != new_name:
+                entity_registry = EntityRegistry(ws)
+
+                # Find all entities belonging to this device
+                for entity_id, entity_info in renamer_state["restructurer"].entities.items():
+                    if entity_info.get("device_id") != device_id:
+                        continue
+
+                    # Get current friendly name
+                    current_name = entity_info.get("name") or entity_info.get("original_name") or ""
+                    if not current_name:
+                        continue
+
+                    # Check if old device name is in the friendly name
+                    if old_device_name not in current_name:
+                        continue
+
+                    # Replace old device name with new device name
+                    new_friendly_name = current_name.replace(old_device_name, new_name)
+
+                    try:
+                        await entity_registry.update_entity(entity_id=entity_id, name=new_friendly_name)
+                        entities_updated += 1
+                        logger.info(f"Updated entity {entity_id}: '{current_name}' -> '{new_friendly_name}'")
+                    except Exception as e:
+                        entities_failed += 1
+                        logger.error(f"Failed to update entity {entity_id}: {e}")
+
+            # Reload structure to reflect changes
+            await renamer_state["restructurer"].load_structure(ws)
+
+            message = f"Gerät erfolgreich umbenannt zu: {new_name}"
+            if entities_updated > 0:
+                message += f" ({entities_updated} Entities aktualisiert)"
+            if entities_failed > 0:
+                message += f" ({entities_failed} Entities fehlgeschlagen)"
+
+            return jsonify(
+                {
+                    "success": True,
+                    "message": message,
+                    "entities_updated": entities_updated,
+                    "entities_failed": entities_failed,
+                }
+            )
 
         finally:
             await ws.disconnect()
@@ -2033,6 +2392,10 @@ async def _get_hierarchy_async():
             # Get original friendly name
             original_name = entity_data.get("name") or entity_data.get("original_name") or ""
 
+            # Debug logging for specific entities
+            if "wallbox" in entity_id.lower():
+                logger.info(f"DEBUG {entity_id}: name={entity_data.get('name')!r}, original_name={entity_data.get('original_name')!r}, computed={original_name!r}")
+
             # Strip device+area prefix from entity name
             # e.g., "Büro Raumluftsensor Kohlendioxid" -> "Kohlendioxid"
             base_name = original_name
@@ -2050,6 +2413,33 @@ async def _get_hierarchy_async():
                     base_name = _strip_prefix(original_name, dev_base)
             elif area_id and area_id in area_names:
                 base_name = _strip_prefix(original_name, area_names[area_id])
+
+            # Fallback: If base_name is still empty or equals domain, try extracting from entity_id
+            domain = entity_id.split(".")[0] if "." in entity_id else ""
+            if not base_name or base_name.lower() == domain:
+                # Try to extract suffix from entity_id
+                # e.g., sensor.tiefgarage_wallbox_angebotene_leistung -> angebotene_leistung
+                entity_slug = entity_id.split(".")[-1] if "." in entity_id else entity_id
+                # Build expected prefix from device/area
+                expected_prefix = ""
+                if device_id and device_id in device_base_names:
+                    dev_area_id = device_area_map.get(device_id)
+                    dev_base = device_base_names[device_id]
+                    if dev_area_id and dev_area_id in area_names:
+                        expected_prefix = f"{area_names[dev_area_id]}_{dev_base}".lower().replace(" ", "_")
+                    else:
+                        expected_prefix = dev_base.lower().replace(" ", "_")
+                elif area_id and area_id in area_names:
+                    expected_prefix = area_names[area_id].lower().replace(" ", "_")
+
+                if expected_prefix and entity_slug.startswith(expected_prefix + "_"):
+                    suffix_slug = entity_slug[len(expected_prefix) + 1:]
+                    # Convert slug to human-readable: replace underscores with spaces, title case
+                    base_name = suffix_slug.replace("_", " ").title()
+
+            # Debug logging for wallbox entities
+            if "wallbox" in entity_id.lower():
+                logger.info(f"DEBUG {entity_id}: base_name={base_name!r}, device_id={device_id}, has_device={device_id in device_base_names if device_id else False}")
 
             entities.append({
                 "id": entity_id,

@@ -73,6 +73,35 @@ class DeviceRegistry:
             logger.error(f"Error enabling device {device_id}: {str(e)}")
             raise
 
+    async def assign_area(self, device_id: str, area_id: Optional[str]) -> Dict[str, Any]:
+        """Assign a device to an area (or remove area assignment if area_id is None)"""
+        logger.info(f"Assigning device {device_id} to area {area_id}")
+
+        try:
+            msg_id = await self.ws._send_message(
+                {
+                    "type": "config/device_registry/update",
+                    "device_id": device_id,
+                    "area_id": area_id,
+                }
+            )
+
+            response = await self.ws._receive_message()
+            while response.get("id") != msg_id:
+                response = await self.ws._receive_message()
+
+            if not response.get("success"):
+                error_msg = response.get("error", {}).get("message", "Unknown error")
+                logger.error(f"Failed to assign area: {error_msg}")
+                raise Exception(f"Failed to assign area: {error_msg}")
+
+            logger.info(f"Successfully assigned device {device_id} to area {area_id}")
+            return {"success": True, "device_id": device_id, "area_id": area_id}
+
+        except Exception as e:
+            logger.error(f"Error assigning device {device_id} to area: {str(e)}")
+            raise
+
     async def get_device(self, device_id: str) -> Optional[Dict[str, Any]]:
         """Holt Geräteinformationen"""
         try:

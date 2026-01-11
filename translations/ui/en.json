@@ -23,7 +23,11 @@
   "area": {
     "name_override_label": "Area Name Override",
     "placeholder": "Area name...",
-    "no_areas": "No areas found"
+    "no_areas": "No areas found",
+    "no_area": "No Area",
+    "assign_area": "Assign Area",
+    "select_area": "Select area...",
+    "area_assigned": "Device assigned to area"
   },
   "summary": {
     "entities": "Entities",
@@ -87,7 +91,24 @@
     "scripts": "Scripts",
     "schedules": "Schedules",
     "helpers": "Helpers",
-    "other": "Other"
+    "other": "Other",
+    "broken_refs": "Broken References"
+  },
+  "broken_refs": {
+    "broken_refs": "broken references",
+    "scanning": "Scanning...",
+    "no_broken": "No broken references found!",
+    "missing": "Missing",
+    "replacement": "Replacement",
+    "click_to_select": "Click to select...",
+    "suggestions": "Suggestions:",
+    "search_other": "Search other entity...",
+    "search_placeholder": "Search entity...",
+    "replace_with": "Replace with:",
+    "fix": "Fix Reference",
+    "fixed_successfully": "Reference fixed successfully",
+    "select_replacement": "Please select a replacement entity",
+    "open_in_ha": "Open in Home Assistant"
   },
   "messages": {
     "loading": "Loading...",
@@ -232,7 +253,9 @@
   },
   "action_bar": {
     "pending_changes": "pending changes",
+    "disabled_entities": "disabled",
     "apply_all": "Apply All Changes",
+    "enable_all": "Enable All",
     "applying": "Applying..."
   },
   "settings": {

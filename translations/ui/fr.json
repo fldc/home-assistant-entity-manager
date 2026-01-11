@@ -23,7 +23,11 @@
   "area": {
     "name_override_label": "Remplacement du nom de zone",
     "placeholder": "Nom de zone...",
-    "no_areas": "Aucune zone trouvée"
+    "no_areas": "Aucune zone trouvée",
+    "no_area": "Sans Zone",
+    "assign_area": "Assigner une Zone",
+    "select_area": "Sélectionner une zone...",
+    "area_assigned": "Appareil assigné à la zone"
   },
   "summary": {
     "entities": "Entités",
@@ -87,7 +91,24 @@
     "scripts": "Scripts",
     "schedules": "Planifications",
     "helpers": "Assistants",
-    "other": "Autres"
+    "other": "Autres",
+    "broken_refs": "Références cassées"
+  },
+  "broken_refs": {
+    "broken_refs": "références cassées",
+    "scanning": "Analyse en cours...",
+    "no_broken": "Aucune référence cassée trouvée !",
+    "missing": "Manquant",
+    "replacement": "Remplacement",
+    "click_to_select": "Cliquez pour sélectionner...",
+    "suggestions": "Suggestions :",
+    "search_other": "Rechercher une autre entité...",
+    "search_placeholder": "Rechercher une entité...",
+    "replace_with": "Remplacer par :",
+    "fix": "Corriger la référence",
+    "fixed_successfully": "Référence corrigée avec succès",
+    "select_replacement": "Veuillez sélectionner une entité de remplacement",
+    "open_in_ha": "Ouvrir dans Home Assistant"
   },
   "messages": {
     "loading": "Chargement...",
@@ -232,7 +253,9 @@
   },
   "action_bar": {
     "pending_changes": "changements en attente",
+    "disabled_entities": "désactivés",
     "apply_all": "Appliquer tous les changements",
+    "enable_all": "Activer Tous",
     "applying": "Application..."
   },
   "type_mappings": {

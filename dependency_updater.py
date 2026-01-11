@@ -112,31 +112,48 @@ class DependencyUpdater:
                     return False
 
     def replace_entity_in_dict(self, data: Any, old_entity_id: str, new_entity_id: str) -> bool:
-        """Rekursiv Entity IDs in einem Dictionary ersetzen"""
+        """Rekursiv Entity IDs in einem Dictionary ersetzen.
+
+        Unterstützt:
+        - entity_id: "entity.id" (direkter Wert)
+        - entity_id: ["entity.id", ...] (Liste unter entity_id Key)
+        - beliebiger_key: "entity.id" (z.B. Blueprint-Inputs)
+        - beliebiger_key: ["entity.id", ...] (z.B. Blueprint-Input Listen)
+        - Templates mit {{ entity.id }}
+        """
         changed = False
 
         if isinstance(data, dict):
             for key, value in data.items():
-                if key == "entity_id" and value == old_entity_id:
-                    data[key] = new_entity_id
-                    changed = True
-                elif key == "entity_id" and isinstance(value, list) and old_entity_id in value:
-                    # Ersetze in Listen
-                    data[key] = [new_entity_id if e == old_entity_id else e for e in value]
-                    changed = True
-                elif isinstance(value, (dict, list)):
+                if isinstance(value, str):
+                    # Direkte String-Werte die exakt die Entity-ID sind
+                    if value == old_entity_id:
+                        data[key] = new_entity_id
+                        changed = True
+                    # Templates mit Entity-Referenzen
+                    elif "{{" in value and "}}" in value and old_entity_id in value:
+                        data[key] = value.replace(old_entity_id, new_entity_id)
+                        changed = True
+                elif isinstance(value, list):
+                    # Listen mit Entity-ID Strings (z.B. entity_id oder Blueprint-Input)
+                    if old_entity_id in value:
+                        data[key] = [new_entity_id if e == old_entity_id else e for e in value]
+                        changed = True
+                    # Rekursiv in Listen von Dicts
                     if self.replace_entity_in_dict(value, old_entity_id, new_entity_id):
                         changed = True
-                elif isinstance(value, str) and old_entity_id in value:
-                    # Prüfe Templates
-                    if "{{" in value and "}}" in value:
-                        data[key] = value.replace(old_entity_id, new_entity_id)
+                elif isinstance(value, dict):
+                    if self.replace_entity_in_dict(value, old_entity_id, new_entity_id):
                         changed = True
 
         elif isinstance(data, list):
-            for item in data:
-                if self.replace_entity_in_dict(item, old_entity_id, new_entity_id):
+            for i, item in enumerate(data):
+                if isinstance(item, str) and item == old_entity_id:
+                    data[i] = new_entity_id
                     changed = True
+                elif isinstance(item, (dict, list)):
+                    if self.replace_entity_in_dict(item, old_entity_id, new_entity_id):
+                        changed = True
 
         return changed
 
