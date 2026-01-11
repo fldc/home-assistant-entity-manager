@@ -2048,10 +2048,11 @@
             </div>
         </div>
 
-               <!-- Action Bar - Fixed at viewport bottom -->
-              <div class="action-bar-fixed bg-white border-t shadow-lg px-4 py-3"
-                    x-show="pendingChangesCount > 0 || disabledEntitiesCount > 0"
-                    x-cloak>
+        <!-- Action Bar - Fixed at viewport bottom -->
+        <div class="action-bar-fixed bg-white border-t shadow-lg px-4 py-3"
+             x-show="pendingChangesCount > 0 || disabledEntitiesCount > 0"
+             x-cloak>
+            <div class="flex items-center justify-between">
                 <div class="flex items-center gap-4">
                     <span class="text-sm text-gray-600" x-show="pendingChangesCount > 0">
                         <span class="font-bold text-amber-600" x-text="pendingChangesCount"></span>
@@ -3949,16 +3950,29 @@
 
                         const data = await response.json();
                         if (data.success) {
-                            // Update local state
-                            this.selectedDeviceData.name = newFullName;
-                            this.selectedDeviceData.base_name = newBaseName;
-                            const device = this.hierarchy.devices.find(d => d.id === this.selectedDevice);
-                            if (device) {
-                                device.name = newFullName;
-                                device.base_name = newBaseName;
-                            }
                             this.devicePreviewBaseName = null;  // Clear preview after successful rename
-                            this.showMessage(`Device renamed to "${newFullName}"`, 'success');
+
+                            // Show success message with entity count
+                            const entityCount = data.entities_updated || 0;
+                            const depCount = data.dependencies_updated || 0;
+                            let msg = `Device renamed to "${newFullName}"`;
+                            if (entityCount > 0) msg += ` (${entityCount} entities`;
+                            if (depCount > 0) msg += `, ${depCount} dependencies`;
+                            if (entityCount > 0) msg += ')';
+                            this.showMessage(msg, 'success');
+
+                            // Wait for HA to persist changes, then reload
+                            await new Promise(resolve => setTimeout(resolve, 500));
+                            const deviceId = this.selectedDevice;  // Keep device ID before reload
+                            await this.loadHierarchy();
+
+                            // Re-select the device from the new hierarchy data
+                            if (deviceId) {
+                                const updatedDevice = this.hierarchy.devices.find(d => d.id === deviceId);
+                                if (updatedDevice) {
+                                    this.selectedDeviceData = updatedDevice;
+                                }
+                            }
                         } else {
                             throw new Error(data.error || 'Failed to rename device');
                         }

@@ -18,6 +18,7 @@ from flask_cors import CORS
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 from dependency_updater import DependencyUpdater
+from hierarchy_manager import normalize_name
 from reference_checker import ReferenceChecker
 from device_registry import DeviceRegistry
 from entity_registry import EntityRegistry
@@ -1217,11 +1218,17 @@ async def _execute_direct_async():
 
                 # Update dependencies (automations, scenes, scripts)
                 dep_results = await dependency_updater.update_all_dependencies(old_id, new_id, cached_states)
-                if dep_results.get("failed"):
+                if dep_results.get("total_failed", 0) > 0:
+                    # Collect all failed updates from scenes, scripts, automations
+                    failed_updates = (
+                        dep_results.get("scenes", {}).get("failed", []) +
+                        dep_results.get("scripts", {}).get("failed", []) +
+                        dep_results.get("automations", {}).get("failed", [])
+                    )
                     results["dependency_warnings"].append({
                         "entity_id": old_id,
                         "new_id": new_id,
-                        "failed_updates": dep_results["failed"]
+                        "failed_updates": failed_updates
                     })
 
                 results["success"].append({
@@ -1660,58 +1667,6 @@ async def _get_all_entities_async():
     except Exception as e:
         logger.error(f"Error getting all entities: {e}")
         return jsonify({"error": str(e)}), 500
-
-
-@app.route("/api/rename_device", methods=["POST"])
-def rename_device():
-    """Benennt ein Gerät um"""
-    # Create new event loop for this request
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    try:
-        return loop.run_until_complete(_rename_device_async())
-    finally:
-        loop.close()
-
-
-async def _rename_device_async():
-    """Async implementation of rename_device"""
-    data = request.json
-    is_valid, error = validate_json_input(data, ["device_id", "new_name"])
-    if not is_valid:
-        return jsonify({"error": error}), 400
-
-    device_id = sanitize_registry_id(data.get("device_id"))
-    new_name = sanitize_name(data.get("new_name"))
-
-    if not device_id:
-        return jsonify({"error": "Invalid device ID"}), 400
-
-    if not new_name:
-        return jsonify({"error": "Invalid device name"}), 400
-
-    base_url = os.getenv("HA_URL")
-    token = os.getenv("HA_TOKEN")
-    ws_url = base_url.replace("https://", "wss://").replace("http://", "ws://") + "/api/websocket"
-
-    ws = HomeAssistantWebSocket(ws_url, token)
-    await ws.connect()
-
-    try:
-        device_registry = DeviceRegistry(ws)
-        result = await device_registry.rename_device(device_id, new_name)
-
-        # Reload the structure so the preview has the updated device names
-        await renamer_state["restructurer"].load_structure(ws)
-
-        return jsonify(result)
-
-    except Exception as e:
-        logger.error(f"Fehler beim Umbenennen des Geräts: {e}")
-        return jsonify({"error": str(e)}), 500
-
-    finally:
-        await ws.disconnect()
 
 
 @app.route("/api/update_mapping", methods=["POST"])
@@ -2165,20 +2120,20 @@ async def _delete_entity_async():
         return jsonify({"error": str(e)}), 500
 
 
-@app.route("/api/rename_device_in_ha", methods=["POST"])
-def rename_device_in_ha():
-    """Benennt ein Gerät tatsächlich in Home Assistant um"""
+@app.route("/api/rename_device", methods=["POST"])
+def rename_device():
+    """Benennt ein Gerät in Home Assistant um und aktualisiert Entity-Namen"""
     # Create new event loop for this request
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     try:
-        return loop.run_until_complete(_rename_device_in_ha_async())
+        return loop.run_until_complete(_rename_device_async())
     finally:
         loop.close()
 
 
-async def _rename_device_in_ha_async():
-    """Async implementation of rename_device_in_ha.
+async def _rename_device_async():
+    """Async implementation of rename_device.
 
     When renaming a device, also updates all entity friendly names that belong
     to this device by replacing the old device name with the new one.
@@ -2227,46 +2182,130 @@ async def _rename_device_in_ha_async():
                     500,
                 )
 
-            # Update entity friendly names if we know the old device name
+            # Update entities: rename ID + friendly name + update dependencies
             entities_updated = 0
             entities_failed = 0
+            entities_skipped = 0
+            dependencies_updated = 0
 
-            if old_device_name and old_device_name != new_name:
-                entity_registry = EntityRegistry(ws)
+            logger.info(f"=== Starting entity rename after device rename ===")
+            logger.info(f"Device ID: {device_id}")
+            logger.info(f"Old device name: {old_device_name}")
+            logger.info(f"New device name: {new_name}")
 
-                # Find all entities belonging to this device
-                for entity_id, entity_info in renamer_state["restructurer"].entities.items():
-                    if entity_info.get("device_id") != device_id:
-                        continue
+            entity_registry = EntityRegistry(ws)
 
-                    # Get current friendly name
-                    current_name = entity_info.get("name") or entity_info.get("original_name") or ""
-                    if not current_name:
-                        continue
+            # Initialize dependency updater
+            base_url = os.getenv("HA_URL")
+            token = os.getenv("HA_TOKEN")
+            dependency_updater = DependencyUpdater(base_url, token)
+            cached_states = await dependency_updater.get_states()
 
-                    # Check if old device name is in the friendly name
-                    if old_device_name not in current_name:
-                        continue
+            # Get area name for this device
+            device_info = renamer_state["restructurer"].devices.get(device_id, {})
+            area_id = device_info.get("area_id")
+            area_name = ""
+            if area_id and area_id in renamer_state["restructurer"].areas:
+                area_name = renamer_state["restructurer"].areas[area_id].get("name", "")
 
-                    # Replace old device name with new device name
-                    new_friendly_name = current_name.replace(old_device_name, new_name)
+            logger.info(f"Area ID: {area_id}, Area name: {area_name}")
 
-                    try:
-                        await entity_registry.update_entity(entity_id=entity_id, name=new_friendly_name)
-                        entities_updated += 1
-                        logger.info(f"Updated entity {entity_id}: '{current_name}' -> '{new_friendly_name}'")
-                    except Exception as e:
-                        entities_failed += 1
-                        logger.error(f"Failed to update entity {entity_id}: {e}")
+            # Get the device base_name (without area prefix)
+            device_base_name = _strip_prefix(new_name, area_name) if area_name else new_name
+
+            # Build old device display name for stripping from entity names
+            old_device_base = _strip_prefix(old_device_name, area_name) if (old_device_name and area_name) else old_device_name
+            old_device_display = f"{area_name} {old_device_base}" if area_name else old_device_base
+
+            # Count entities for this device
+            device_entities = [eid for eid, einfo in renamer_state["restructurer"].entities.items()
+                               if einfo.get("device_id") == device_id]
+            logger.info(f"Found {len(device_entities)} entities for device {device_id}")
+
+            # Find all entities belonging to this device
+            for old_entity_id, entity_info in list(renamer_state["restructurer"].entities.items()):
+                if entity_info.get("device_id") != device_id:
+                    continue
+
+                # Get current entity name
+                original_name = entity_info.get("name") or entity_info.get("original_name") or ""
+                logger.info(f"Processing entity {old_entity_id}: original_name='{original_name}'")
+
+                if not original_name:
+                    logger.info(f"  Skipping - no original_name")
+                    entities_skipped += 1
+                    continue
+
+                # Compute entity base_name (suffix) by stripping area and device prefixes
+                entity_suffix = original_name
+                if old_device_display:
+                    entity_suffix = _strip_prefix(entity_suffix, old_device_display)
+                if entity_suffix == original_name and old_device_base:
+                    entity_suffix = _strip_prefix(entity_suffix, old_device_base)
+                if entity_suffix == original_name and area_name:
+                    entity_suffix = _strip_prefix(entity_suffix, area_name)
+
+                # Build new friendly name: Area + Device Base + Entity Suffix
+                parts = []
+                if area_name:
+                    parts.append(area_name)
+                parts.append(device_base_name)
+                if entity_suffix and entity_suffix != original_name:
+                    parts.append(entity_suffix)
+
+                new_friendly_name = " ".join(parts)
+
+                # Build new entity ID
+                domain = old_entity_id.split(".")[0]
+                new_entity_id = f"{domain}.{normalize_name(new_friendly_name)}"
+
+                logger.info(f"  {old_entity_id} -> {new_entity_id} ('{new_friendly_name}')")
+
+                # Skip if nothing would change
+                if new_entity_id == old_entity_id and new_friendly_name == original_name:
+                    logger.info(f"  Skipping - no changes needed")
+                    entities_skipped += 1
+                    continue
+
+                try:
+                    # Rename entity (ID + friendly name)
+                    id_changed = new_entity_id != old_entity_id
+                    await entity_registry.rename_entity(
+                        old_entity_id,
+                        new_entity_id if id_changed else None,
+                        new_friendly_name
+                    )
+                    entities_updated += 1
+                    logger.info(f"  SUCCESS: Renamed entity")
+
+                    # Update dependencies if ID changed
+                    if id_changed:
+                        dep_results = await dependency_updater.update_all_dependencies(
+                            old_entity_id, new_entity_id, cached_states
+                        )
+                        dep_count = dep_results.get("total_success", 0)
+                        dependencies_updated += dep_count
+                        if dep_count > 0:
+                            logger.info(f"  Updated {dep_count} dependencies")
+
+                except Exception as e:
+                    entities_failed += 1
+                    logger.error(f"  FAILED: {e}")
 
             # Reload structure to reflect changes
             await renamer_state["restructurer"].load_structure(ws)
 
+            logger.info(f"=== Entity rename complete ===")
+            logger.info(f"Updated: {entities_updated}, Failed: {entities_failed}, Skipped: {entities_skipped}, Dependencies: {dependencies_updated}")
+
             message = f"Gerät erfolgreich umbenannt zu: {new_name}"
             if entities_updated > 0:
-                message += f" ({entities_updated} Entities aktualisiert)"
+                message += f" ({entities_updated} Entities"
+                if dependencies_updated > 0:
+                    message += f", {dependencies_updated} Dependencies"
+                message += " aktualisiert)"
             if entities_failed > 0:
-                message += f" ({entities_failed} Entities fehlgeschlagen)"
+                message += f" ({entities_failed} fehlgeschlagen)"
 
             return jsonify(
                 {
@@ -2274,6 +2313,7 @@ async def _rename_device_in_ha_async():
                     "message": message,
                     "entities_updated": entities_updated,
                     "entities_failed": entities_failed,
+                    "dependencies_updated": dependencies_updated,
                 }
             )
 
