@@ -30,6 +30,7 @@ class BrokenReference:
     context: str  # "trigger" | "action" | "condition" | "entity"
     numeric_id: Optional[str] = None  # For automation/scene edit links
     area_id: Optional[str] = None  # Area assigned to the automation/scene/script
+    yaml_path: Optional[str] = None  # Path in YAML, e.g. "use_blueprint -> input -> button_1 -> entity_id"
 
     def to_dict(self) -> Dict:
         return asdict(self)
@@ -204,18 +205,26 @@ class ReferenceChecker:
         service_name = parts[1]
         return service_name in self.KNOWN_SERVICES
 
-    def _extract_entity_ids(self, data: Any, parent_key: str = None) -> Set[str]:
-        """Extrahiert alle Entity-IDs aus einer Datenstruktur."""
-        entity_ids = set()
+    def _extract_entity_ids_with_path(self, data: Any, current_path: str = "") -> Dict[str, str]:
+        """Extrahiert alle Entity-IDs mit ihrem YAML-Pfad aus einer Datenstruktur.
+
+        Returns:
+            Dict mapping entity_id -> yaml_path (e.g. "use_blueprint -> input -> button_1 -> entity_id")
+        """
+        entity_paths: Dict[str, str] = {}
+
+        # Get the last key in path to check for skip
+        path_parts = current_path.split(" -> ") if current_path else []
+        last_key = path_parts[-1] if path_parts else None
 
         # Skip certain keys entirely (blueprints paths, service calls, etc.)
-        if parent_key in self.SKIP_KEYS:
-            return entity_ids
+        if last_key in self.SKIP_KEYS:
+            return entity_paths
 
         if isinstance(data, str):
             # Don't extract from strings that look like file paths
             if "/" in data or data.endswith(".yaml") or data.endswith(".yml"):
-                return entity_ids
+                return entity_paths
 
             # Finde alle Entity-ID-Patterns im String
             matches = self.ENTITY_ID_PATTERN.findall(data)
@@ -224,27 +233,44 @@ class ReferenceChecker:
                 if domain in self.VALID_DOMAINS:
                     # Skip if it's a known service call
                     if not self._is_service_call(match):
-                        entity_ids.add(match)
+                        entity_paths[match] = current_path or "(root)"
 
         elif isinstance(data, dict):
             # Spezielle Keys die Entity-IDs enthalten
             if "entity_id" in data:
+                entity_id_path = f"{current_path} -> entity_id" if current_path else "entity_id"
                 val = data["entity_id"]
                 if isinstance(val, str):
-                    entity_ids.add(val)
+                    domain = val.split(".")[0]
+                    if domain in self.VALID_DOMAINS and not self._is_service_call(val):
+                        entity_paths[val] = entity_id_path
                 elif isinstance(val, list):
-                    entity_ids.update(val)
+                    for v in val:
+                        if isinstance(v, str):
+                            domain = v.split(".")[0]
+                            if domain in self.VALID_DOMAINS and not self._is_service_call(v):
+                                entity_paths[v] = entity_id_path
 
             # Rekursiv alle Werte durchsuchen, aber bestimmte Keys überspringen
             for key, value in data.items():
-                if key not in self.SKIP_KEYS:
-                    entity_ids.update(self._extract_entity_ids(value, parent_key=key))
+                if key not in self.SKIP_KEYS and key != "entity_id":  # entity_id already handled
+                    new_path = f"{current_path} -> {key}" if current_path else key
+                    entity_paths.update(self._extract_entity_ids_with_path(value, new_path))
 
         elif isinstance(data, list):
-            for item in data:
-                entity_ids.update(self._extract_entity_ids(item, parent_key=parent_key))
+            for i, item in enumerate(data):
+                # For lists, add index only if it's meaningful (more than one item or dict items)
+                if len(data) > 1 or isinstance(item, dict):
+                    new_path = f"{current_path}[{i}]" if current_path else f"[{i}]"
+                else:
+                    new_path = current_path
+                entity_paths.update(self._extract_entity_ids_with_path(item, new_path))
 
-        return entity_ids
+        return entity_paths
+
+    def _extract_entity_ids(self, data: Any, parent_key: str = None) -> Set[str]:
+        """Extrahiert alle Entity-IDs aus einer Datenstruktur (ohne Pfad)."""
+        return set(self._extract_entity_ids_with_path(data).keys())
 
     async def _get_automation_configs(self) -> List[Dict]:
         """Hole alle Automation-Konfigurationen."""
@@ -274,9 +300,7 @@ class ReferenceChecker:
                             {
                                 "entity_id": state["entity_id"],
                                 "numeric_id": automation_id,
-                                "name": state.get("attributes", {}).get(
-                                    "friendly_name", state["entity_id"]
-                                ),
+                                "name": state.get("attributes", {}).get("friendly_name", state["entity_id"]),
                                 "config": config,
                             }
                         )
@@ -309,9 +333,7 @@ class ReferenceChecker:
                             {
                                 "entity_id": state["entity_id"],
                                 "numeric_id": scene_id,
-                                "name": state.get("attributes", {}).get(
-                                    "friendly_name", state["entity_id"]
-                                ),
+                                "name": state.get("attributes", {}).get("friendly_name", state["entity_id"]),
                                 "config": config,
                             }
                         )
@@ -341,9 +363,7 @@ class ReferenceChecker:
                         scripts.append(
                             {
                                 "entity_id": state["entity_id"],
-                                "name": state.get("attributes", {}).get(
-                                    "friendly_name", state["entity_id"]
-                                ),
+                                "name": state.get("attributes", {}).get("friendly_name", state["entity_id"]),
                                 "config": config,
                             }
                         )
@@ -377,21 +397,20 @@ class ReferenceChecker:
         logger.info("Scanning automations...")
         automations = await self._get_automation_configs()
         for auto in automations:
-            referenced = self._extract_entity_ids(auto["config"])
-            for entity_id in referenced:
+            # Get entity IDs with their YAML paths
+            referenced_with_paths = self._extract_entity_ids_with_path(auto["config"])
+            for entity_id, yaml_path in referenced_with_paths.items():
                 if entity_id not in existing:
-                    # Bestimme Context
-                    config_str = json.dumps(auto["config"])
+                    # Determine context from yaml_path
                     context = "action"
-                    if f'"entity_id": "{entity_id}"' in config_str:
-                        if '"trigger"' in config_str and entity_id in json.dumps(
-                            auto["config"].get("trigger", [])
-                        ):
-                            context = "trigger"
-                        elif '"condition"' in config_str and entity_id in json.dumps(
-                            auto["config"].get("condition", [])
-                        ):
-                            context = "condition"
+                    if yaml_path.startswith("trigger"):
+                        context = "trigger"
+                    elif yaml_path.startswith("condition"):
+                        context = "condition"
+                    elif "trigger" in yaml_path:
+                        context = "trigger"
+                    elif "condition" in yaml_path:
+                        context = "condition"
 
                     broken_refs.append(
                         BrokenReference(
@@ -402,6 +421,7 @@ class ReferenceChecker:
                             context=context,
                             numeric_id=auto.get("numeric_id"),
                             area_id=get_area_id(auto["entity_id"]),
+                            yaml_path=yaml_path,
                         )
                     )
 
@@ -421,6 +441,7 @@ class ReferenceChecker:
                             context="entity",
                             numeric_id=scene.get("numeric_id"),
                             area_id=get_area_id(scene["entity_id"]),
+                            yaml_path="entities",
                         )
                     )
 
@@ -428,8 +449,8 @@ class ReferenceChecker:
         logger.info("Scanning scripts...")
         scripts = await self._get_script_configs()
         for script in scripts:
-            referenced = self._extract_entity_ids(script["config"])
-            for entity_id in referenced:
+            referenced_with_paths = self._extract_entity_ids_with_path(script["config"])
+            for entity_id, yaml_path in referenced_with_paths.items():
                 if entity_id not in existing:
                     broken_refs.append(
                         BrokenReference(
@@ -439,6 +460,7 @@ class ReferenceChecker:
                             missing_entity_id=entity_id,
                             context="action",
                             area_id=get_area_id(script["entity_id"]),
+                            yaml_path=yaml_path,
                         )
                     )
 
@@ -466,9 +488,7 @@ class ReferenceChecker:
 
         return previous_row[-1]
 
-    def _calculate_similarity(
-        self, missing_id: str, candidate_id: str
-    ) -> Tuple[float, List[str]]:
+    def _calculate_similarity(self, missing_id: str, candidate_id: str) -> Tuple[float, List[str]]:
         """Berechnet die Ähnlichkeit zwischen zwei Entity-IDs."""
         score = 0.0
         reasons = []
@@ -505,9 +525,7 @@ class ReferenceChecker:
 
         return (score, reasons)
 
-    async def get_suggestions(
-        self, missing_entity_id: str, limit: int = 5
-    ) -> List[Suggestion]:
+    async def get_suggestions(self, missing_entity_id: str, limit: int = 5) -> List[Suggestion]:
         """Generiert Ersatz-Vorschläge basierend auf Ähnlichkeit.
 
         Nur Entities mit der gleichen Domain werden vorgeschlagen.
